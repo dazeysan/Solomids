@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Solomids</title>
+
+  <script>
+    // Copyright for the random seed code:
+    /*
+    Copyright 2014 David Bau.
+
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    */
+
+    (function (pool, math) {
+    //
+    // The following constants are related to IEEE 754 limits.
+    //
+
+    // Detect the global object, even if operating in strict mode.
+    // http://stackoverflow.com/a/14387057/265298
+    var global = (0, eval)('this'),
+        width = 256,        // each RC4 output is 0 <= x < 256
+        chunks = 6,         // at least six RC4 outputs for each double
+        digits = 52,        // there are 52 significant digits in a double
+        rngname = 'random', // rngname: name for Math.random and Math.seedrandom
+        startdenom = math.pow(width, chunks),
+        significance = math.pow(2, digits),
+        overflow = significance * 2,
+        mask = width - 1,
+        nodecrypto;         // node.js crypto module, initialized at the bottom.
+
+    //
+    // seedrandom()
+    // This is the seedrandom function described above.
+    //
+    function seedrandom(seed, options, callback) {
+      var key = [];
+      options = (options == true) ? { entropy: true } : (options || {});
+
+      // Flatten the seed string or build one from local entropy if needed.
+      var shortseed = mixkey(flatten(
+        options.entropy ? [seed, tostring(pool)] :
+        (seed == null) ? autoseed() : seed, 3), key);
+
+      // Use the seed to initialize an ARC4 generator.
+      var arc4 = new ARC4(key);
+
+      // This function returns a random double in [0, 1) that contains
+      // randomness in every bit of the mantissa of the IEEE 754 value.
+      var prng = function() {
+        var n = arc4.g(chunks),             // Start with a numerator n < 2 ^ 48
+            d = startdenom,                 //   and denominator d = 2 ^ 48.
+            x = 0;                          //   and no 'extra last byte'.
+        while (n < significance) {          // Fill up all significant digits by
+          n = (n + x) * width;              //   shifting numerator and
+          d *= width;                       //   denominator and generating a
+          x = arc4.g(1);                    //   new least-significant-byte.
+        }
+        while (n >= overflow) {             // To avoid rounding up, before adding
+          n /= 2;                           //   last byte, shift everything
+          d /= 2;                           //   right using integer math until
+          x >>>= 1;                         //   we have exactly the desired bits.
+        }
+        return (n + x) / d;                 // Form the number within [0, 1).
+      };
+
+      prng.int32 = function() { return arc4.g(4) | 0; }
+      prng.quick = function() { return arc4.g(4) / 0x100000000; }
+      prng.double = prng;
+
+      // Mix the randomness into accumulated entropy.
+      mixkey(tostring(arc4.S), pool);
+
+      // Calling convention: what to return as a function of prng, seed, is_math.
+      return (options.pass || callback ||
+          function(prng, seed, is_math_call, state) {
+            if (state) {
+              // Load the arc4 state from the given state if it has an S array.
+              if (state.S) { copy(state, arc4); }
+              // Only provide the .state method if requested via options.state.
+              prng.state = function() { return copy(arc4, {}); }
+            }
+
+            // If called as a method of Math (Math.seedrandom()), mutate
+            // Math.random because that is how seedrandom.js has worked since v1.0.
+            if (is_math_call) { math[rngname] = prng; return seed; }
+
+            // Otherwise, it is a newer calling convention, so return the
+            // prng directly.
+            else return prng;
+          })(
+      prng,
+      shortseed,
+      'global' in options ? options.global : (this == math),
+      options.state);
+    }
+    math['seed' + rngname] = seedrandom;
+
+    //
+    // ARC4
+    //
+    // An ARC4 implementation.  The constructor takes a key in the form of
+    // an array of at most (width) integers that should be 0 <= x < (width).
+    //
+    // The g(count) method returns a pseudorandom integer that concatenates
+    // the next (count) outputs from ARC4.  Its return value is a number x
+    // that is in the range 0 <= x < (width ^ count).
+    //
+    function ARC4(key) {
+      var t, keylen = key.length,
+          me = this, i = 0, j = me.i = me.j = 0, s = me.S = [];
+
+      // The empty key [] is treated as [0].
+      if (!keylen) { key = [keylen++]; }
+
+      // Set up S using the standard key scheduling algorithm.
+      while (i < width) {
+        s[i] = i++;
+      }
+      for (i = 0; i < width; i++) {
+        s[i] = s[j = mask & (j + key[i % keylen] + (t = s[i]))];
+        s[j] = t;
+      }
+
+      // The "g" method returns the next (count) outputs as one number.
+      (me.g = function(count) {
+        // Using instance members instead of closure state nearly doubles speed.
+        var t, r = 0,
+            i = me.i, j = me.j, s = me.S;
+        while (count--) {
+          t = s[i = mask & (i + 1)];
+          r = r * width + s[mask & ((s[i] = s[j = mask & (j + t)]) + (s[j] = t))];
+        }
+        me.i = i; me.j = j;
+        return r;
+        // For robust unpredictability, the function call below automatically
+        // discards an initial batch of values.  This is called RC4-drop[256].
+        // See http://google.com/search?q=rsa+fluhrer+response&btnI
+      })(width);
+    }
+
+    //
+    // copy()
+    // Copies internal state of ARC4 to or from a plain object.
+    //
+    function copy(f, t) {
+      t.i = f.i;
+      t.j = f.j;
+      t.S = f.S.slice();
+      return t;
+    };
+
+    //
+    // flatten()
+    // Converts an object tree to nested arrays of strings.
+    //
+    function flatten(obj, depth) {
+      var result = [], typ = (typeof obj), prop;
+      if (depth && typ == 'object') {
+        for (prop in obj) {
+          try { result.push(flatten(obj[prop], depth - 1)); } catch (e) {}
+        }
+      }
+      return (result.length ? result : typ == 'string' ? obj : obj + '\0');
+    }
+
+    //
+    // mixkey()
+    // Mixes a string seed into a key that is an array of integers, and
+    // returns a shortened string seed that is equivalent to the result key.
+    //
+    function mixkey(seed, key) {
+      var stringseed = seed + '', smear, j = 0;
+      while (j < stringseed.length) {
+        key[mask & j] =
+          mask & ((smear ^= key[mask & j] * 19) + stringseed.charCodeAt(j++));
+      }
+      return tostring(key);
+    }
+
+    //
+    // autoseed()
+    // Returns an object for autoseeding, using window.crypto and Node crypto
+    // module if available.
+    //
+    function autoseed() {
+      try {
+        var out;
+        if (nodecrypto && (out = nodecrypto.randomBytes)) {
+          // The use of 'out' to remember randomBytes makes tight minified code.
+          out = out(width);
+        } else {
+          out = new Uint8Array(width);
+          (global.crypto || global.msCrypto).getRandomValues(out);
+        }
+        return tostring(out);
+      } catch (e) {
+        var browser = global.navigator,
+            plugins = browser && browser.plugins;
+        return [+new Date, global, plugins, global.screen, tostring(pool)];
+      }
+    }
+
+    //
+    // tostring()
+    // Converts an array of charcodes to a string
+    //
+    function tostring(a) {
+      return String.fromCharCode.apply(0, a);
+    }
+
+    //
+    // When seedrandom.js is loaded, we immediately mix a few bits
+    // from the built-in RNG into the entropy pool.  Because we do
+    // not want to interfere with deterministic PRNG state later,
+    // seedrandom will not call math.random on its own again after
+    // initialization.
+    //
+    mixkey(math.random(), pool);
+
+    //
+    // Nodejs and AMD support: export the implementation as a module using
+    // either convention.
+    //
+    if ((typeof module) == 'object' && module.exports) {
+      module.exports = seedrandom;
+      // When in node.js, try using crypto package for autoseeding.
+      try {
+        nodecrypto = require('crypto');
+      } catch (ex) {}
+    } else if ((typeof define) == 'function' && define.amd) {
+      define(function() { return seedrandom; });
+    }
+
+    // End anonymous scope, and pass initial values.
+    })(
+      [],     // pool: entropy pool starts empty
+      Math    // math: package containing random, pow, and seedrandom
+    );
+
+  </script>
+  
+  <style>
+  @font-face {
+    font-family: 'PyramidLove';
+    src: url('Pyramid-Love-3.1.woff');
+  }
+  
+   /* The container must be positioned relative: */
+  .custom-select {
+    position: relative;
+    font-family: Arial;
+    border: 1px solid #000000
+  }
+
+  .custom-select select {
+    display: none; /*hide original SELECT element: */
+  }
+
+  .select-selected {
+    background-color: White;
+  }
+
+  /* Style the arrow inside the select element: */
+  .select-selected:after {
+    position: absolute;
+    content: "";
+    top: 14px;
+    right: 10px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-color: #000000 transparent transparent transparent;
+  }
+
+  /* Point the arrow upwards when the select box is open (active): */
+  .select-selected.select-arrow-active:after {
+    border-color: transparent transparent #fff transparent;
+    top: 7px;
+  }
+
+  /* style the items (options), including the selected item: */
+  .select-items div,.select-selected {
+    color: #000000;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
+    cursor: pointer;
+  }
+
+  /* Style items (options): */
+  .select-items {
+    position: absolute;
+    background-color: White;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 99;
+  }
+
+  /* Hide the items when the select box is closed: */
+  .select-hide {
+    display: none;
+  }
+
+  .select-items div:hover, .same-as-selected {
+    background-color: rgba(0, 0, 0, 0.1);
+  } 
+  </style>
+  
+</head>
+<body>
+
+<button type="button" onClick="Javascript:SeedGame();">Seeded Game</button>
+<input type="text" id="seedbox" onkeypress="return enterKeySeed(event)"></input>
+<button type="button" onClick="Javascript:NewGame();">Random Game</button>
+<br/>
+<br/>
+<div class="custom-select" style="width:200px;">
+  <select id="stashSelector">
+    <option value="0">Select color palette:</option>
+    <option value="1" selected>Rainbow Stash</option>
+    <option value="2">Xeno Stash</option>
+    <option value="3">Test Stash</option>
+  </select>
+</div>
+<br/>
+<div id="status"></div>
+<br/>
+
+<canvas id="myCanvas" width="250" height="500" style="border:2px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+<br/>
+<br/>
+
+
+
+<button type="button" onClick="Javascript:ResetBoard();DrawBoard();SetPyramid('none');">Clear Board</button>
+ - <a id="download" download="image.png"><button type="button" onClick="download()">Download Image</button></a>
+<br/>
+<br/>
+<br/>
+<br/>
+<!--
+<div id="answerBox" style="width: 100px; height: 50px; background-color: red;" onClick="Javascript:toggleAnswerBox();"></div>
+<textarea id="answerText" rows="4" cols="50"></textarea>
+-->
+<script>
+ 
+  var seed=0;
+  var boardWidth = 5;
+  var boardHeight = 10;
+  var cellWidth = 50;
+  var cellHeight = 50;
+  var fontSizeRatio = 0.8;
+  var fillColors = ["#fff", "#bbddff"];
+  var stashes = [ 
+    [], 
+    ["hotpink", "red", "yellow", "green", "blue", "black"], 
+    ["hotpink", "cyan", "purple", "orange", "lightgrey", "darkgrey"], 
+    ["hotpink", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
+  ];  //slot 0/hotpink is for 1-index padding
+      //the Xeno stash should be clear and opaque white, not greys
+    
+  //Draw the board
+  function DrawBoard(){
+    var c=document.getElementById("myCanvas");
+    c.width = boardWidth*cellWidth;
+    c.height = boardHeight*cellHeight;
+    var ctx=c.getContext("2d");
+    ctx.beginPath();
+    ctx.fillStyle=fillColors[0];
+    ctx.fillRect(0,0 ,boardWidth*cellWidth,boardHeight*cellHeight);
+    ctx.strokeStyle="#000000";
+    ctx.fillStyle=fillColors[1];
+    ctx.setLineDash([]);
+
+
+    for(i=0;i<boardWidth;i++) {
+      for(j=0;j<boardHeight;j++) {
+        // Draw the squares
+        for(var row=0;row<boardHeight;row++) {
+          for(var col=0; col<boardWidth;col+=2) {
+            startX = col * cellWidth;
+            if(row%2==0) {
+              startX = (col+1) * cellWidth;
+            }
+            ctx.fillRect(startX + left,(row*cellHeight) ,cellWidth,cellHeight);
+          }
+        }
+        ctx.moveTo(0,cellHeight*j);
+        ctx.lineTo(boardWidth*cellWidth,cellHeight*j);
+        ctx.stroke();
+     
+        ctx.moveTo(cellWidth*i,0);
+        ctx.lineTo(cellWidth*i,boardHeight*cellHeight);
+        ctx.stroke();
+        var left = 0;
+      }
+    }
+    ctx.moveTo(0,boardHeight*cellHeight);
+    ctx.lineTo(boardWidth*cellWidth,boardHeight*cellHeight);
+    ctx.stroke();
+ 
+    ctx.moveTo(boardWidth*cellWidth,0);
+    ctx.lineTo(boardWidth*cellWidth,boardHeight*cellHeight);
+    ctx.stroke();
+    
+    <!-- ctx.font = cellHeight*fontSizeRatio+'px PyramidLove'; -->
+    <!-- ctx.fillStyle = 'orangered'; -->
+    <!-- ctx.textBaseline = 'top'; -->
+    <!-- ctx.fillText  ('\ue99e', (cellWidth-ctx.measureText('\ue99e').width)/2, cellHeight*((1-fontSizeRatio)/2)); -->
+    <!-- ctx.fillText  ('\ue927', (cellWidth*((1-fontSizeRatio)/2))+cellWidth, cellHeight*((1-fontSizeRatio)/2)); -->
+    <!-- ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth+cellWidth, cellHeight*((1-fontSizeRatio)/2)); -->
+    
+  }
+  
+  var board;
+  //var pyramidColors=["#cc79a7", "#069f73", "#e79f27"];  //Color blind friendly Purple, Green, Orange
+  var pyramidColors=stashes[1];
+  var pyramidSizes=["none", "pawn", "drone", "queen"];  //slot 0 is for 1-index padding
+  //var towers=[ [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0] ];
+  //var pyramids=[ [0,0],[0,0],[0,0] ];
+  //var editShape="";
+  //var editPyramid="purple";
+  //var editActive=false;
+  //var bggAnswerBox=false;
+  
+  function ResetBoard() {
+    //board = [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], ];
+    bag = [ 11, 11, 11, 12, 12, 12, 13, 13, 13, 21, 21, 21, 22, 22, 22, 23, 23, 23, 31, 31, 31, 32, 32, 32, 33, 33, 33, 41, 41, 41, 42, 42, 42, 43, 43, 43, 51, 51, 51, 52, 52, 52, 53, 53, 53 ];
+    board = [ [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0] ];
+  }
+  ResetBoard();
+    
+    function AddShape(shape, color, x, y) {
+      //console.log("AddShape("+shape+","+color+","+x+","+y+")");
+      var c=document.getElementById("myCanvas");
+      var ctx=c.getContext("2d");
+      ctx.strokeStyle="#000000";
+      ctx.lineWidth=1;
+      ctx.setLineDash([]);
+      ctx.fillStyle=color;
+      ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
+      ctx.textBaseline = 'top';
+
+      if (shape=="pawn") {
+        ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+
+      if (shape=="drone") {
+        ctx.fillText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+
+      if (shape=="queen") {
+        ctx.fillText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+      
+      if (shape=="pyramid") {
+        sx = x*50;
+        sy = y*50;
+        ctx.beginPath();
+        ctx.moveTo(sx+25, sy+10);
+        ctx.lineTo(sx+15, sy+40);
+        ctx.lineTo(sx+35, sy+40);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+      }
+
+      if (shape=="active-pyramid") {
+        ctx.setLineDash([5, 3]);
+        ctx.strokeStyle=color;
+        ctx.lineWidth=2;
+        sx = x*50;
+        sy = y*50;
+        ctx.beginPath();
+        ctx.moveTo(sx+25, sy+2);
+        ctx.lineTo(sx+10, sy+43);
+        ctx.lineTo(sx+40, sy+43);
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      if (shape=="square") {
+        sx = x*50;
+        sy = y*50;
+        ctx.beginPath();
+        ctx.rect(sx+5,sy+5,40,40);
+        ctx.stroke();
+        ctx.fill();
+      }
+
+      if (shape=="circle") {
+        sx = x*50;
+        sy = y*50;
+        ctx.beginPath();
+        ctx.arc(sx+25,sy+25,20,0,2*Math.PI);
+        ctx.stroke();
+        ctx.fill();
+      }
+    }
+
+  function NewTowers() {
+    for (i=0; i<9; i++) {
+      x=Math.floor(Math.random()*8);
+      y=Math.floor(Math.random()*8);
+      //console.log(x+","+y);
+      if (board[x][y]==0) {
+        board[x][y] = 1;
+        AddShape("square", "black", x, y);
+        towers[i]=[x,y];
+      } else {
+        i--;
+        continue;
+      }
+    }
+  }
+
+  function NewPyramids() {
+    for (i=0; i<3; i++) {
+      x=Math.floor(Math.random()*8);
+      y=Math.floor(Math.random()*8);
+      //console.log(x+","+y);
+      if (board[x][y]==0) {
+        board[x][y] = 10*(i+1);
+        AddShape("pyramid", pyramidColors[i], x, y);
+        pyramids[i]=[x,y];
+      } else {
+        i--;
+        continue;
+      }
+    }
+  }
+  
+  function NewTarget() {
+    target=Math.floor(Math.random()*9);
+    //console.log("target="+target);
+    AddShape("circle", "gold", towers[target][0], towers[target][1]);
+  }
+  
+  function NewActivePyramid() {
+    pyramid=Math.floor(Math.random()*3);
+    //console.log("pyramid="+pyramid);
+    AddShape("active-pyramid", pyramidColors[pyramid], pyramids[pyramid][0], pyramids[pyramid][1])
+  }
+  
+  function ShuffleBag() {
+    console.log("ShuffleBag()");
+    //document.getElementById("status").innerHTML="<span style='font-family: PyramidLove'>\ue91c</span>";
+    document.getElementById("status").innerHTML="";
+    var newBag=[];
+    var p=45;
+    var usedPieces = [-1, 0, 0, 0];
+    var tmpSizeErrors = 0;
+    var tmpSizeRowErrors = 0;
+    var tmpMatchErrors = 0;
+    var keepTrying = true;
+    var tmpRow = [];
+    
+    do {
+      for (row=0; row<9; row++) {
+        tmpRow = [-1, 0, 0, 0];
+        for (col=0; col<5; col++) {
+          keepTrying=true;
+          do {
+            tmpRand=Math.floor(Math.random()*p);
+            console.log(tmpRand);
+            tmpSize=bag[tmpRand].toString()[1];
+            tmpError=false;
+            if (usedPieces[tmpSize] - row >= 7) {
+              tmpSizeErrors++;
+              console.log("Size Error "+tmpSizeErrors);
+              tmpError=true;
+            }
+            if (tmpRow[tmpSize]>=3) {
+              tmpSizeRowErrors++;
+              console.log("Size in row Error "+tmpSizeRowErrors);
+              tmpError=true;
+            }
+            if (bag[tmpRand] == newBag[newBag.length-1] && col != 0) {
+              tmpMatchErrors++;
+              console.log("New piece matches previous in same row "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              tmpError=true;
+            }
+            
+            if (!tmpError) {
+              console.log("Good Pull "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              usedPieces[tmpSize]++;
+              newBag.push(bag.splice((tmpRand), 1)[0]);
+              tmpRow[tmpSize]++;
+              keepTrying=false;
+            }
+
+            console.log(usedPieces+","+p+","+row+","+col+" || "+tmpRow);
+            if (tmpSizeErrors >= 100 || tmpSizeRowErrors >= 100 || tmpMatchErrors >= 100) {
+              console.log("Too many Errors, breaking");
+              document.getElementById("status").innerHTML="Can't randomize board with this seed.";
+              return(0);
+            }
+          } while (keepTrying);
+          
+          p--;
+        }
+      }
+    } while (p>0);
+    bag=newBag;
+    console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors);
+  }
+  
+  function DisplayBag() {
+    var piece=0;
+    for (row=1; row<=9; row++) {  
+      for (col=0; col<=4; col++) {
+        tmpColor=pyramidColors[bag[piece].toString()[0]];
+        tmpShape=pyramidSizes[bag[piece].toString()[1]];
+        AddShape(tmpShape, tmpColor, col, row);
+        piece++;
+      }
+    }
+  }
+  
+  function SetColor() {
+    var selector = document.getElementById("stashSelector").value;
+    pyramidColors = stashes[selector];
+    DisplayBag();
+  }
+  
+  function NewGame() {
+    seed=Math.floor(Math.random()*100000).toString();
+    Math.seedrandom(seed);
+    document.getElementById("seedbox").value=seed;
+    ResetBoard();
+    DrawBoard();
+    //NewTowers();
+    //NewPyramids();
+    //NewTarget();
+    //NewActivePyramid();
+    ShuffleBag();
+    DisplayBag();
+  }
+
+  function SeedGame() {
+    seed=document.getElementById("seedbox").value.toString();
+    Math.seedrandom(seed);
+    document.getElementById("seedbox").value=seed;
+    ResetBoard();
+    DrawBoard();
+    //NewTowers();
+    //NewPyramids();
+    //NewTarget();
+    //NewActivePyramid();
+    ShuffleBag();
+    DisplayBag();
+  }
+  
+  function EraseSquare(x, y) {
+    var c=document.getElementById("myCanvas");
+    var ctx=c.getContext("2d");
+    ctx.fillStyle="white";
+    ctx.strokeStyle="#000000";
+    ctx.setLineDash([]);
+    sx = x*50;
+    sy = y*50;
+    if((y%2 > 0 && x%2 == 0) || (y%2 == 0 && x%2 > 0)) {
+      ctx.fillStyle="#BBDDFF";
+    }
+    ctx.beginPath();
+    ctx.rect(sx+1,sy+1,48,48);
+    ctx.stroke();
+    ctx.fill();
+  }
+  
+  function SetPyramid(color) {
+    document.getElementById("buttonPurple").style.backgroundColor="";
+    document.getElementById("buttonGreen").style.backgroundColor="";
+    document.getElementById("buttonOrange").style.backgroundColor="";
+    document.getElementById("buttonSquare").style.backgroundColor="";
+    document.getElementById("buttonCircle").style.backgroundColor="";
+    document.getElementById("buttonErase").style.backgroundColor="";
+    if (color == "purple") {
+      editPyramid=pyramidColors[0];
+      document.getElementById("buttonPurple").style.backgroundColor="darkgrey";
+    }
+    if (color == "green") {
+      editPyramid=pyramidColors[1];
+      document.getElementById("buttonGreen").style.backgroundColor="darkgrey";
+    }
+    if (color == "orange") {
+      editPyramid=pyramidColors[2];
+      document.getElementById("buttonOrange").style.backgroundColor="darkgrey";
+    }
+  }
+  
+  function SetActive() {
+    if (editActive==true) {
+      editActive=false;
+      document.getElementById("buttonActive").style.backgroundColor="";
+    } else {
+      editActive=true;
+      document.getElementById("buttonActive").style.backgroundColor="darkgrey";
+    }
+  }
+  
+  var c = document.getElementById('myCanvas');
+  var canvLeft = c.offsetLeft;
+  var canvTop = c.offsetTop;
+  var context = c.getContext('2d');
+
+  c.addEventListener('click', function(event) {
+    var clickx = event.pageX - canvLeft;
+    var clicky = event.pageY - canvTop;
+    x=Math.ceil(clickx/50)-1;
+    y=Math.ceil(clicky/50)-1;
+    
+    console.log(clickx+","+clicky);
+    if (editShape=="erase"){
+      EraseSquare(x, y);
+    }
+    if (editShape=="square") {
+      AddShape("square", "black", x, y);
+    }
+    if (editShape=="circle") {
+      AddShape("circle", "gold", x, y);
+    }
+    if (editShape=="pyramid") {
+      AddShape("pyramid", editPyramid, x, y);
+      if (editActive == true) {
+        AddShape("active-pyramid", editPyramid, x, y);
+      }
+    }
+  }, false);
+  
+  document.addEventListener('keydown', (event) => {
+    const keyName = event.key;
+    var textbox=document.getElementById("answerText");
+    if (textbox.selectionStart == '0'){
+      newline="";
+    } else {
+      newline="\n";
+    }
+    if (bggAnswerBox == true) {
+      //alert('keydown event\n\n' + 'key: ' + keyName);
+      if (keyName =="ArrowUp") {
+        insertAtCursor(textbox,":arrowN:");
+      }
+      if (keyName =="ArrowDown") {
+        insertAtCursor(textbox,":arrowS:");
+      }
+      if (keyName =="ArrowLeft") {
+        insertAtCursor(textbox,":arrowW:");
+      }
+      if (keyName =="ArrowRight") {
+        insertAtCursor(textbox,":arrowE:");
+      }
+      if (keyName =="o") {
+        insertAtCursor(textbox,newline+"Orange: ");
+      }
+      if (keyName =="p") {
+        insertAtCursor(textbox,newline+"Pink: ");
+      }
+      if (keyName =="g") {
+        insertAtCursor(textbox,newline+"Green: ");
+      }
+    }
+  });
+  
+  function toggleAnswerBox() {
+    if (bggAnswerBox == false) {
+      bggAnswerBox=true;
+      document.getElementById("answerBox").style.backgroundColor="green";
+    } else {
+      bggAnswerBox=false;
+      document.getElementById("answerBox").style.backgroundColor="red";
+    }
+  }
+  
+// http://stackoverflow.com/questions/11076975/insert-text-into-textarea-at-cursor-position-javascript
+function insertAtCursor(myField, myValue) {
+    //IE support
+    if (document.selection) {
+        myField.focus();
+        sel = document.selection.createRange();
+        sel.text = myValue;
+    }
+    //MOZILLA and others
+    else if (myField.selectionStart || myField.selectionStart == '0') {
+        var startPos = myField.selectionStart;
+        var endPos = myField.selectionEnd;
+        myField.value = myField.value.substring(0, startPos)
+            + myValue
+            + myField.value.substring(endPos, myField.value.length);
+        myField.selectionStart = startPos + myValue.length;
+        myField.selectionEnd = startPos + myValue.length;
+        myField.blur();
+    } else {
+        myField.value += myValue;
+        myField.blur();
+    }
+}
+  
+function download(){
+  var download = document.getElementById("download");
+  var image = document.getElementById("myCanvas").toDataURL("image/png")
+    .replace("image/png", "image/octet-stream");
+  download.setAttribute("href", image);
+  download.setAttribute("download",seed+".png");
+}
+
+function enterKeySeed(e) {
+    //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
+    if (e.keyCode == 13) {
+        SeedGame();
+        return false;
+    }
+}
+
+
+const canvas = document.getElementById("mycanvas");
+// load the "PyramidLove" font
+const fontFile = new FontFace(
+  "PyramidLove",
+  "url(Pyramid-Love-3.1.woff)",
+);
+document.fonts.add(fontFile);
+
+fontFile.load().then(
+  () => {
+    // font loaded successfully!
+    NewGame();
+  },
+  (err) => {
+    console.error(err);
+  },
+);
+
+// From https://www.w3schools.com/howto/howto_custom_select.asp
+var x, i, j, l, ll, selElmnt, a, b, c;
+/* Look for any elements with the class "custom-select": */
+x = document.getElementsByClassName("custom-select");
+l = x.length;
+for (i = 0; i < l; i++) {
+  selElmnt = x[i].getElementsByTagName("select")[0];
+  ll = selElmnt.length;
+  /* For each element, create a new DIV that will act as the selected item: */
+  a = document.createElement("DIV");
+  a.setAttribute("class", "select-selected");
+  a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
+  x[i].appendChild(a);
+  /* For each element, create a new DIV that will contain the option list: */
+  b = document.createElement("DIV");
+  b.setAttribute("class", "select-items select-hide");
+  for (j = 1; j < ll; j++) {
+    /* For each option in the original select element,
+    create a new DIV that will act as an option item: */
+    c = document.createElement("DIV");
+    c.innerHTML = selElmnt.options[j].innerHTML;
+    c.addEventListener("click", function(e) {
+        /* When an item is clicked, update the original select box,
+        and the selected item: */
+        var y, i, k, s, h, sl, yl;
+        s = this.parentNode.parentNode.getElementsByTagName("select")[0];
+        sl = s.length;
+        h = this.parentNode.previousSibling;
+        for (i = 0; i < sl; i++) {
+          if (s.options[i].innerHTML == this.innerHTML) {
+            s.selectedIndex = i;
+            h.innerHTML = this.innerHTML;
+            y = this.parentNode.getElementsByClassName("same-as-selected");
+            yl = y.length;
+            for (k = 0; k < yl; k++) {
+              y[k].removeAttribute("class");
+            }
+            this.setAttribute("class", "same-as-selected");
+            break;
+          }
+        }
+        h.click();
+        SetColor();
+    });
+    b.appendChild(c);
+  }
+  x[i].appendChild(b);
+  a.addEventListener("click", function(e) {
+    /* When the select box is clicked, close any other select boxes,
+    and open/close the current select box: */
+    e.stopPropagation();
+    closeAllSelect(this);
+    this.nextSibling.classList.toggle("select-hide");
+    this.classList.toggle("select-arrow-active");
+  });
+}
+
+function closeAllSelect(elmnt) {
+  /* A function that will close all select boxes in the document,
+  except the current select box: */
+  var x, y, i, xl, yl, arrNo = [];
+  x = document.getElementsByClassName("select-items");
+  y = document.getElementsByClassName("select-selected");
+  xl = x.length;
+  yl = y.length;
+  for (i = 0; i < yl; i++) {
+    if (elmnt == y[i]) {
+      arrNo.push(i)
+    } else {
+      y[i].classList.remove("select-arrow-active");
+    }
+  }
+  for (i = 0; i < xl; i++) {
+    if (arrNo.indexOf(i)) {
+      x[i].classList.add("select-hide");
+    }
+  }
+}
+
+/* If the user clicks anywhere outside the select box,
+then close all select boxes: */
+document.addEventListener("click", closeAllSelect); 
+
+</script>
+ 
+</body>
+</html>
