@@ -342,7 +342,7 @@
     <div class="custom-select" style="width:200px; display: table-cell;">
       <select id="stashSelector">
         <option value="0">Select color palette:</option>
-        <option value="1" selected>Rainbow Stash</option>
+        <option value="1">Rainbow Stash</option>
         <option value="2">Xeno Stash</option>
         <option value="3">Test Stash</option>
       </select>
@@ -350,8 +350,8 @@
     <div class="custom-select" style="width:200px; display: table-cell;">
       <select id="backgroundSelector">
         <option value="0">Select board colors:</option>
-        <option value="1" selected>Black & White</option>
-        <option value="2" selected>White & Black</option>
+        <option value="1">Black & White</option>
+        <option value="2">White & Black</option>
         <option value="3">White & Light Blue</option>
         <option value="4">Peach & Grey</option>
       </select>
@@ -359,7 +359,7 @@
   </div>
   <div style="display: table-row;">
     <div style="display: table-cell;">
-      <input type="checkbox" id="checkShadow" onClick="setStyle('shadow')" /><label for="checkShadow">Shadow</label><br/>
+      <input type="checkbox" id="checkShadow" onClick="setStyle('shadow')" /><label for="checkShadow">Shadow</label><input type="checkbox" id="checkShadowInverted" onClick="setStyle('shadowinverted')" /><label for="checkShadowInverted">Inverted</label><br/>
       <input type="checkbox" id="checkOutline" onClick="setStyle('outline')" /><label for="checkOutline">Outline</label>
     </div>
     <div style="display: table-cell;">
@@ -385,10 +385,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 <br/>
 <br/>
 <br/>
-<!--
-<div id="answerBox" style="width: 100px; height: 50px; background-color: red;" onClick="Javascript:toggleAnswerBox();"></div>
-<textarea id="answerText" rows="4" cols="50"></textarea>
--->
+
 <script>
  
   var seed=0;
@@ -398,6 +395,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   var cellHeight = 50;
   var fontSizeRatio = 0.8;
   var styleDropShadow = false;
+  var styleShadowInverted = false;
   var styleOutline = false;
   var stashColors = [ 
     [], 
@@ -411,7 +409,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     ["#000", "#fff"],
     ["#fff", "#000"],
     ["#fff", "#bbddff"],
-    ["peachpuff", "#858585"]
+    ["#ffdab9", "#858585"]
   ];
     
   
@@ -494,7 +492,12 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     ctx.strokeStyle="#000000";
     ctx.lineWidth=1;
     if (styleDropShadow) {
-      ctx.shadowColor="white";
+      if (styleShadowInverted) {
+        //ctx.shadowColor=invertColor(fillColors[(x+y)%2]);
+        ctx.shadowColor=fillColors[(x+y+1)%2];
+      } else {
+        ctx.shadowColor="white";
+      }
       ctx.shadowBlur=7;
     }
     ctx.setLineDash([]);
@@ -659,6 +662,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   function SetStashColor() {
     var selector = document.getElementById("stashSelector").value;
     pyramidColors = stashColors[selector];
+    DrawBoard();
     DisplayBag();
   }
   
@@ -682,6 +686,11 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   function setStyle(type){
     if (type == "shadow") {
       styleDropShadow=document.getElementById("checkShadow").checked; 
+      DrawBoard();
+      DisplayBag();
+    }
+    if (type == "shadowinverted") {
+      styleShadowInverted=document.getElementById("checkShadowInverted").checked; 
       DrawBoard();
       DisplayBag();
     }
@@ -750,49 +759,6 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     }
   }, false);
   
-  document.addEventListener('keydown', (event) => {
-    const keyName = event.key;
-    var textbox=document.getElementById("answerText");
-    if (textbox.selectionStart == '0'){
-      newline="";
-    } else {
-      newline="\n";
-    }
-    if (bggAnswerBox == true) {
-      //alert('keydown event\n\n' + 'key: ' + keyName);
-      if (keyName =="ArrowUp") {
-        insertAtCursor(textbox,":arrowN:");
-      }
-      if (keyName =="ArrowDown") {
-        insertAtCursor(textbox,":arrowS:");
-      }
-      if (keyName =="ArrowLeft") {
-        insertAtCursor(textbox,":arrowW:");
-      }
-      if (keyName =="ArrowRight") {
-        insertAtCursor(textbox,":arrowE:");
-      }
-      if (keyName =="o") {
-        insertAtCursor(textbox,newline+"Orange: ");
-      }
-      if (keyName =="p") {
-        insertAtCursor(textbox,newline+"Pink: ");
-      }
-      if (keyName =="g") {
-        insertAtCursor(textbox,newline+"Green: ");
-      }
-    }
-  });
-  
-  function toggleAnswerBox() {
-    if (bggAnswerBox == false) {
-      bggAnswerBox=true;
-      document.getElementById("answerBox").style.backgroundColor="green";
-    } else {
-      bggAnswerBox=false;
-      document.getElementById("answerBox").style.backgroundColor="red";
-    }
-  }
   
 // http://stackoverflow.com/questions/11076975/insert-text-into-textarea-at-cursor-position-javascript
 function insertAtCursor(myField, myValue) {
@@ -933,6 +899,42 @@ function closeAllSelect(elmnt) {
       x[i].classList.add("select-hide");
     }
   }
+}
+
+function invertColor(hex, bw) {
+  //From: https://stackoverflow.com/questions/35969656/how-can-i-generate-the-opposite-color-according-to-current-color
+  console.log("invertColors("+hex+", "+bw+");");
+  if (hex.indexOf('#') === 0) {
+    hex = hex.slice(1);
+  }
+  // convert 3-digit hex to 6-digits.
+  if (hex.length === 3) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  }
+  if (hex.length !== 6) {
+    throw new Error('Invalid HEX color.');
+  }
+  var r = parseInt(hex.slice(0, 2), 16),
+      g = parseInt(hex.slice(2, 4), 16),
+      b = parseInt(hex.slice(4, 6), 16);
+  if (bw) {
+    // https://stackoverflow.com/a/3943023/112731
+    return (r * 0.299 + g * 0.587 + b * 0.114) > 186
+      ? '#000000'
+      : '#FFFFFF';
+  }
+  // invert color components
+  r = (255 - r).toString(16);
+  g = (255 - g).toString(16);
+  b = (255 - b).toString(16);
+  // pad each with zeros and return
+  console.log("invertColors return #" + padZero(r) + padZero(g) + padZero(b));
+  return "#" + padZero(r) + padZero(g) + padZero(b);
+}
+function padZero(str, len) {
+  len = len || 2;
+  var zeros = new Array(len).join('0');
+  return (zeros + str).slice(-len);
 }
 
 makeDropdown();
