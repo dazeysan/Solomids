@@ -3,6 +3,9 @@
 <head>
 <title>Solomids</title>
 
+<!-- Copyright 2023 dazeysan -->
+<!-- Still need to remove unused Ricochet Pyramids code -->
+
   <script>
     // Copyright for the random seed code:
     /*
@@ -519,50 +522,6 @@ Your browser does not support the HTML5 canvas tag.</canvas>
         ctx.fill();
       }
     }
-
-  function NewTowers() {
-    for (i=0; i<9; i++) {
-      x=Math.floor(Math.random()*8);
-      y=Math.floor(Math.random()*8);
-      //console.log(x+","+y);
-      if (board[x][y]==0) {
-        board[x][y] = 1;
-        AddShape("square", "black", x, y);
-        towers[i]=[x,y];
-      } else {
-        i--;
-        continue;
-      }
-    }
-  }
-
-  function NewPyramids() {
-    for (i=0; i<3; i++) {
-      x=Math.floor(Math.random()*8);
-      y=Math.floor(Math.random()*8);
-      //console.log(x+","+y);
-      if (board[x][y]==0) {
-        board[x][y] = 10*(i+1);
-        AddShape("pyramid", pyramidColors[i], x, y);
-        pyramids[i]=[x,y];
-      } else {
-        i--;
-        continue;
-      }
-    }
-  }
-  
-  function NewTarget() {
-    target=Math.floor(Math.random()*9);
-    //console.log("target="+target);
-    AddShape("circle", "gold", towers[target][0], towers[target][1]);
-  }
-  
-  function NewActivePyramid() {
-    pyramid=Math.floor(Math.random()*3);
-    //console.log("pyramid="+pyramid);
-    AddShape("active-pyramid", pyramidColors[pyramid], pyramids[pyramid][0], pyramids[pyramid][1])
-  }
   
   function ShuffleBag() {
     console.log("ShuffleBag()");
@@ -673,54 +632,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     DisplayBag();
   }
   
-  function EraseSquare(x, y) {
-    var c=document.getElementById("myCanvas");
-    var ctx=c.getContext("2d");
-    ctx.fillStyle="white";
-    ctx.strokeStyle="#000000";
-    ctx.setLineDash([]);
-    sx = x*50;
-    sy = y*50;
-    if((y%2 > 0 && x%2 == 0) || (y%2 == 0 && x%2 > 0)) {
-      ctx.fillStyle="#BBDDFF";
-    }
-    ctx.beginPath();
-    ctx.rect(sx+1,sy+1,48,48);
-    ctx.stroke();
-    ctx.fill();
-  }
-  
-  function SetPyramid(color) {
-    document.getElementById("buttonPurple").style.backgroundColor="";
-    document.getElementById("buttonGreen").style.backgroundColor="";
-    document.getElementById("buttonOrange").style.backgroundColor="";
-    document.getElementById("buttonSquare").style.backgroundColor="";
-    document.getElementById("buttonCircle").style.backgroundColor="";
-    document.getElementById("buttonErase").style.backgroundColor="";
-    if (color == "purple") {
-      editPyramid=pyramidColors[0];
-      document.getElementById("buttonPurple").style.backgroundColor="darkgrey";
-    }
-    if (color == "green") {
-      editPyramid=pyramidColors[1];
-      document.getElementById("buttonGreen").style.backgroundColor="darkgrey";
-    }
-    if (color == "orange") {
-      editPyramid=pyramidColors[2];
-      document.getElementById("buttonOrange").style.backgroundColor="darkgrey";
-    }
-  }
-  
-  function SetActive() {
-    if (editActive==true) {
-      editActive=false;
-      document.getElementById("buttonActive").style.backgroundColor="";
-    } else {
-      editActive=true;
-      document.getElementById("buttonActive").style.backgroundColor="darkgrey";
-    }
-  }
-  
+ 
   var c = document.getElementById('myCanvas');
   var canvLeft = c.offsetLeft;
   var canvTop = c.offsetTop;
