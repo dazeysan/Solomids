@@ -337,13 +337,35 @@
 <button type="button" onClick="Javascript:NewGame();">Random Game</button>
 <br/>
 <br/>
-<div class="custom-select" style="width:200px;">
-  <select id="stashSelector">
-    <option value="0">Select color palette:</option>
-    <option value="1" selected>Rainbow Stash</option>
-    <option value="2">Xeno Stash</option>
-    <option value="3">Test Stash</option>
-  </select>
+<div style="display: table;">
+  <div style="display: table-row;">
+    <div class="custom-select" style="width:200px; display: table-cell;">
+      <select id="stashSelector">
+        <option value="0">Select color palette:</option>
+        <option value="1" selected>Rainbow Stash</option>
+        <option value="2">Xeno Stash</option>
+        <option value="3">Test Stash</option>
+      </select>
+    </div>
+    <div class="custom-select" style="width:200px; display: table-cell;">
+      <select id="backgroundSelector">
+        <option value="0">Select board colors:</option>
+        <option value="1" selected>Black & White</option>
+        <option value="2" selected>White & Black</option>
+        <option value="3">White & Light Blue</option>
+        <option value="4">Peach & Grey</option>
+      </select>
+    </div>
+  </div>
+  <div style="display: table-row;">
+    <div style="display: table-cell;">
+      <input type="checkbox" id="checkShadow" onClick="setStyle('shadow')" /><label for="checkShadow">Shadow</label><br/>
+      <input type="checkbox" id="checkOutline" onClick="setStyle('outline')" /><label for="checkOutline">Outline</label>
+    </div>
+    <div style="display: table-cell;">
+      b
+    </div>
+  </div>
 </div>
 <br/>
 <div id="status"></div>
@@ -375,17 +397,26 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   var cellWidth = 50;
   var cellHeight = 50;
   var fontSizeRatio = 0.8;
-  var fillColors = ["#fff", "#bbddff"];
-  var stashes = [ 
+  var styleDropShadow = false;
+  var styleOutline = false;
+  var stashColors = [ 
     [], 
-    ["hotpink", "red", "yellow", "green", "blue", "black"], 
-    ["hotpink", "cyan", "purple", "orange", "lightgrey", "darkgrey"], 
+    ["hotpink", "red", "#d3d319", "green", "blue", "black"], 
+    ["hotpink", "cyan", "purple", "orange", "#eee", "#555"], 
     ["hotpink", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
   ];  //slot 0/hotpink is for 1-index padding
       //the Xeno stash should be clear and opaque white, not greys
+  var boardColors = [
+    [],
+    ["#000", "#fff"],
+    ["#fff", "#000"],
+    ["#fff", "#bbddff"],
+    ["peachpuff", "#858585"]
+  ];
     
-  //Draw the board
+  
   function DrawBoard(){
+    // Draw the board
     var c=document.getElementById("myCanvas");
     c.width = boardWidth*cellWidth;
     c.height = boardHeight*cellHeight;
@@ -439,7 +470,8 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   
   var board;
   //var pyramidColors=["#cc79a7", "#069f73", "#e79f27"];  //Color blind friendly Purple, Green, Orange
-  var pyramidColors=stashes[1];
+  var pyramidColors=stashColors[1];
+  var fillColors=boardColors[1];
   var pyramidSizes=["none", "pawn", "drone", "queen"];  //slot 0 is for 1-index padding
   //var towers=[ [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0] ];
   //var pyramids=[ [0,0],[0,0],[0,0] ];
@@ -455,73 +487,86 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   }
   ResetBoard();
     
-    function AddShape(shape, color, x, y) {
-      //console.log("AddShape("+shape+","+color+","+x+","+y+")");
-      var c=document.getElementById("myCanvas");
-      var ctx=c.getContext("2d");
-      ctx.strokeStyle="#000000";
-      ctx.lineWidth=1;
-      ctx.setLineDash([]);
-      ctx.fillStyle=color;
-      ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
-      ctx.textBaseline = 'top';
+  function AddShape(shape, color, x, y) {
+    //console.log("AddShape("+shape+","+color+","+x+","+y+")");
+    var c=document.getElementById("myCanvas");
+    var ctx=c.getContext("2d");
+    ctx.strokeStyle="#000000";
+    ctx.lineWidth=1;
+    if (styleDropShadow) {
+      ctx.shadowColor="white";
+      ctx.shadowBlur=7;
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle=color;
+    ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
+    ctx.textBaseline = 'top';
 
-      if (shape=="pawn") {
-        ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      }
-
-      if (shape=="drone") {
-        ctx.fillText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      }
-
-      if (shape=="queen") {
-        ctx.fillText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      }
-      
-      if (shape=="pyramid") {
-        sx = x*50;
-        sy = y*50;
-        ctx.beginPath();
-        ctx.moveTo(sx+25, sy+10);
-        ctx.lineTo(sx+15, sy+40);
-        ctx.lineTo(sx+35, sy+40);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fill();
-      }
-
-      if (shape=="active-pyramid") {
-        ctx.setLineDash([5, 3]);
-        ctx.strokeStyle=color;
-        ctx.lineWidth=2;
-        sx = x*50;
-        sy = y*50;
-        ctx.beginPath();
-        ctx.moveTo(sx+25, sy+2);
-        ctx.lineTo(sx+10, sy+43);
-        ctx.lineTo(sx+40, sy+43);
-        ctx.closePath();
-        ctx.stroke();
-      }
-
-      if (shape=="square") {
-        sx = x*50;
-        sy = y*50;
-        ctx.beginPath();
-        ctx.rect(sx+5,sy+5,40,40);
-        ctx.stroke();
-        ctx.fill();
-      }
-
-      if (shape=="circle") {
-        sx = x*50;
-        sy = y*50;
-        ctx.beginPath();
-        ctx.arc(sx+25,sy+25,20,0,2*Math.PI);
-        ctx.stroke();
-        ctx.fill();
+    if (shape=="pawn") {
+      ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      if (styleOutline) {
+        ctx.strokeText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       }
     }
+
+    if (shape=="drone") {
+      ctx.fillText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      if (styleOutline) {
+        ctx.strokeText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+    }
+
+    if (shape=="queen") {
+      ctx.fillText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      if (styleOutline) {
+        ctx.strokeText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+    }
+    
+    if (shape=="pyramid") {
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.moveTo(sx+25, sy+10);
+      ctx.lineTo(sx+15, sy+40);
+      ctx.lineTo(sx+35, sy+40);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+    }
+
+    if (shape=="active-pyramid") {
+      ctx.setLineDash([5, 3]);
+      ctx.strokeStyle=color;
+      ctx.lineWidth=2;
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.moveTo(sx+25, sy+2);
+      ctx.lineTo(sx+10, sy+43);
+      ctx.lineTo(sx+40, sy+43);
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    if (shape=="square") {
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.rect(sx+5,sy+5,40,40);
+      ctx.stroke();
+      ctx.fill();
+    }
+
+    if (shape=="circle") {
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.arc(sx+25,sy+25,20,0,2*Math.PI);
+      ctx.stroke();
+      ctx.fill();
+    }
+  }
   
   function ShuffleBag() {
     console.log("ShuffleBag()");
@@ -533,8 +578,10 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     var tmpSizeErrors = 0;
     var tmpSizeRowErrors = 0;
     var tmpMatchErrors = 0;
+    var tmpSizeDistErrors = 0;
     var keepTrying = true;
     var tmpRow = [];
+    var tmpRow2 = [];
     
     do {
       for (row=0; row<9; row++) {
@@ -547,18 +594,29 @@ Your browser does not support the HTML5 canvas tag.</canvas>
             tmpSize=bag[tmpRand].toString()[1];
             tmpError=false;
             if (usedPieces[tmpSize] - row >= 7) {
+              // Make sure there is at least 1 piece left of this size for each of the rows bellow.
               tmpSizeErrors++;
               console.log("Size Error "+tmpSizeErrors);
               tmpError=true;
             }
             if (tmpRow[tmpSize]>=3) {
+              // Make sure there are at most 3 of a given size in each row.
               tmpSizeRowErrors++;
-              console.log("Size in row Error "+tmpSizeRowErrors);
+              console.log("Size in row Error "+tmpSizeRowErrors+"--"+bag[tmpRand]+"|"+newBag[newBag.length-1]);
               tmpError=true;
             }
             if (bag[tmpRand] == newBag[newBag.length-1] && col != 0) {
+              // Make sure no piece matches its neighbor to the left
               tmpMatchErrors++;
               console.log("New piece matches previous in same row "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              tmpError=true;
+            }
+            tmpRow2=[...tmpRow];
+            tmpRow2[tmpSize]++;
+            if (col == 4 && tmpRow2.includes(0)) {
+              // Make sure there is at least 1 of each size in the row.
+              tmpSizeDistErrors++;
+              console.log("Missing a certain size in this row. "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
               tmpError=true;
             }
             
@@ -583,7 +641,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
       }
     } while (p>0);
     bag=newBag;
-    console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors);
+    console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors+", "+tmpSizeDistErrors);
   }
   
   function DisplayBag() {
@@ -598,10 +656,40 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     }
   }
   
-  function SetColor() {
+  function SetStashColor() {
     var selector = document.getElementById("stashSelector").value;
-    pyramidColors = stashes[selector];
+    pyramidColors = stashColors[selector];
     DisplayBag();
+  }
+  
+  function SetBackgroundColor() {
+    var selector = document.getElementById("backgroundSelector").value;
+    fillColors = boardColors[selector];
+    DrawBoard();
+    DisplayBag();
+  }
+  
+  function DropClicked(id) {
+    console.log("DropClicked("+id+")");
+    if (id == "stashSelector") {
+      SetStashColor();
+    }
+    if (id == "backgroundSelector") {
+      SetBackgroundColor();
+    }
+  }
+  
+  function setStyle(type){
+    if (type == "shadow") {
+      styleDropShadow=document.getElementById("checkShadow").checked; 
+      DrawBoard();
+      DisplayBag();
+    }
+    if (type == "outline") {
+      styleOutline=document.getElementById("checkOutline").checked; 
+      DrawBoard();
+      DisplayBag();
+    }
   }
   
   function NewGame() {
@@ -765,61 +853,64 @@ fontFile.load().then(
   },
 );
 
-// From https://www.w3schools.com/howto/howto_custom_select.asp
-var x, i, j, l, ll, selElmnt, a, b, c;
-/* Look for any elements with the class "custom-select": */
-x = document.getElementsByClassName("custom-select");
-l = x.length;
-for (i = 0; i < l; i++) {
-  selElmnt = x[i].getElementsByTagName("select")[0];
-  ll = selElmnt.length;
-  /* For each element, create a new DIV that will act as the selected item: */
-  a = document.createElement("DIV");
-  a.setAttribute("class", "select-selected");
-  a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
-  x[i].appendChild(a);
-  /* For each element, create a new DIV that will contain the option list: */
-  b = document.createElement("DIV");
-  b.setAttribute("class", "select-items select-hide");
-  for (j = 1; j < ll; j++) {
-    /* For each option in the original select element,
-    create a new DIV that will act as an option item: */
-    c = document.createElement("DIV");
-    c.innerHTML = selElmnt.options[j].innerHTML;
-    c.addEventListener("click", function(e) {
-        /* When an item is clicked, update the original select box,
-        and the selected item: */
-        var y, i, k, s, h, sl, yl;
-        s = this.parentNode.parentNode.getElementsByTagName("select")[0];
-        sl = s.length;
-        h = this.parentNode.previousSibling;
-        for (i = 0; i < sl; i++) {
-          if (s.options[i].innerHTML == this.innerHTML) {
-            s.selectedIndex = i;
-            h.innerHTML = this.innerHTML;
-            y = this.parentNode.getElementsByClassName("same-as-selected");
-            yl = y.length;
-            for (k = 0; k < yl; k++) {
-              y[k].removeAttribute("class");
+function makeDropdown() {
+  // From https://www.w3schools.com/howto/howto_custom_select.asp
+  var x, i, j, l, ll, selElmnt, a, b, c;
+  /* Look for any elements with the class "custom-select": */
+  x = document.getElementsByClassName("custom-select");
+  l = x.length;
+  for (i = 0; i < l; i++) {
+    selElmnt = x[i].getElementsByTagName("select")[0];
+    ll = selElmnt.length;
+    /* For each element, create a new DIV that will act as the selected item: */
+    a = document.createElement("DIV");
+    a.setAttribute("class", "select-selected");
+    a.id = selElmnt.id+"Div";
+    a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
+    x[i].appendChild(a);
+    /* For each element, create a new DIV that will contain the option list: */
+    b = document.createElement("DIV");
+    b.setAttribute("class", "select-items select-hide");
+    for (j = 1; j < ll; j++) {
+      /* For each option in the original select element,
+      create a new DIV that will act as an option item: */
+      c = document.createElement("DIV");
+      c.innerHTML = selElmnt.options[j].innerHTML;
+      c.addEventListener("click", function(e) {
+          /* When an item is clicked, update the original select box,
+          and the selected item: */
+          var y, i, k, s, h, sl, yl;
+          s = this.parentNode.parentNode.getElementsByTagName("select")[0];
+          sl = s.length;
+          h = this.parentNode.previousSibling;
+          for (i = 0; i < sl; i++) {
+            if (s.options[i].innerHTML == this.innerHTML) {
+              s.selectedIndex = i;
+              h.innerHTML = this.innerHTML;
+              y = this.parentNode.getElementsByClassName("same-as-selected");
+              yl = y.length;
+              for (k = 0; k < yl; k++) {
+                y[k].removeAttribute("class");
+              }
+              this.setAttribute("class", "same-as-selected");
+              break;
             }
-            this.setAttribute("class", "same-as-selected");
-            break;
           }
-        }
-        h.click();
-        SetColor();
+          h.click();
+          DropClicked(s.id);
+      });
+      b.appendChild(c);
+    }
+    x[i].appendChild(b);
+    a.addEventListener("click", function(e) {
+      /* When the select box is clicked, close any other select boxes,
+      and open/close the current select box: */
+      e.stopPropagation();
+      closeAllSelect(this);
+      this.nextSibling.classList.toggle("select-hide");
+      this.classList.toggle("select-arrow-active");
     });
-    b.appendChild(c);
   }
-  x[i].appendChild(b);
-  a.addEventListener("click", function(e) {
-    /* When the select box is clicked, close any other select boxes,
-    and open/close the current select box: */
-    e.stopPropagation();
-    closeAllSelect(this);
-    this.nextSibling.classList.toggle("select-hide");
-    this.classList.toggle("select-arrow-active");
-  });
 }
 
 function closeAllSelect(elmnt) {
@@ -844,6 +935,7 @@ function closeAllSelect(elmnt) {
   }
 }
 
+makeDropdown();
 /* If the user clicks anywhere outside the select box,
 then close all select boxes: */
 document.addEventListener("click", closeAllSelect); 
