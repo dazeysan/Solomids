@@ -381,7 +381,8 @@
     <div style="display: table-cell;">
       <input type="checkbox" id="checkShadow" onClick="javascript:{setStyle('shadow');}" /><label for="checkShadow">Shadow</label><!--
    --><input type="checkbox" id="checkShadowInverted" onClick="javascript:{setStyle('shadowinverted');}" /><label for="checkShadowInverted">Inverted</label><br/>
-      <input type="checkbox" id="checkOutline" onClick="javascript:{setStyle('outline');}" /><label for="checkOutline">Outline</label>
+      <input type="checkbox" id="checkOutline" onClick="javascript:{setStyle('outline');}" /><label for="checkOutline">Outline</label><!--
+   --><input type="checkbox" id="checkOutlineInverted" onClick="javascript:{setStyle('outlineinverted');}" /><label for="checkOutlineInverted">Inverted</label><br/>
     </div>
     <div style="display: table-cell;">
       <!-- empty -->
@@ -406,7 +407,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 <br/>
 <br/>
 <br/>
-<input type="color" />
+
 
 <script>
  
@@ -419,6 +420,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   var styleDropShadow = false;
   var styleShadowInverted = false;
   var styleOutline = false;
+  var styleOutlineInverted = false;
   var stashColors = [ 
     ["Select color palette:"], 
     ["Rainbow Stash", "#ff0000", "#d3d319", "#008000", "#0000ff", "#000000"], 
@@ -515,7 +517,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     ctx.lineWidth=1;
     if (styleDropShadow) {
       if (styleShadowInverted) {
-        //ctx.shadowColor=invertColor(fillColors[(x+y)%2]);
+        //ctx.shadowColor=invertColor(fillColors[(x+y)%2], true);
         ctx.shadowColor=fillColors[(x+y+1)%2];
       } else {
         ctx.shadowColor="white";
@@ -530,6 +532,9 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     if (shape=="pawn") {
       ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       if (styleOutline) {
+        if (styleOutlineInverted) {
+          ctx.strokeStyle=fillColors[(x+y+1)%2];
+        }
         ctx.strokeText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       }
     }
@@ -537,6 +542,9 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     if (shape=="drone") {
       ctx.fillText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       if (styleOutline) {
+        if (styleOutlineInverted) {
+          ctx.strokeStyle=fillColors[(x+y+1)%2];
+        }
         ctx.strokeText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       }
     }
@@ -544,6 +552,9 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     if (shape=="queen") {
       ctx.fillText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       if (styleOutline) {
+        if (styleOutlineInverted) {
+          ctx.strokeStyle=fillColors[(x+y+1)%2];
+        }
         ctx.strokeText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
       }
     }
@@ -773,6 +784,15 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     }
     if (type == "outline") {
       styleOutline=document.getElementById("checkOutline").checked; 
+      DrawBoard();
+      DisplayBag();
+    }
+    if (type == "outlineinverted") {
+      styleOutlineInverted=document.getElementById("checkOutlineInverted").checked; 
+      if (styleOutlineInverted && !styleOutline) {
+        document.getElementById("checkOutline").checked=true; 
+        styleOutline=document.getElementById("checkOutline").checked; 
+      }
       DrawBoard();
       DisplayBag();
     }
