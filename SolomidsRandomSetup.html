@@ -403,6 +403,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 
 <button type="button" onClick="Javascript:ResetBoard();DrawBoard();SetPyramid('none');">Clear Board</button>
  - <a id="download" download="image.png"><button type="button" onClick="download()">Download Image</button></a>
+ - <button type="button" onClick="Javascript:RotateBoard('toggle');">Rotate Board</button>
 <br/>
 <br/>
 <br/>
@@ -436,6 +437,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
   ];
   var customStashColor = [];
   var customBoardColor = [];
+  var boardRotation = 0;
   
   function DrawBoard(){
     // Draw the board
@@ -725,6 +727,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     pyramidColors[4] = document.getElementById("customStashColorPicker4").value;
     pyramidColors[5] = document.getElementById("customStashColorPicker5").value;
     customStashColor=[...pyramidColors];
+    customStashColor[0]="Custom-"+customStashColor[0];
     DrawBoard();
     DisplayBag();
   }
@@ -753,6 +756,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
     fillColors[0] = document.getElementById("customBoardColorPicker0").value;
     fillColors[1] = document.getElementById("customBoardColorPicker1").value;
     customBoardColor=[...fillColors];
+    customBoardColor[2]="Custom-"+customBoardColor[2];
     DrawBoard();
     DisplayBag();
   }
@@ -795,6 +799,32 @@ Your browser does not support the HTML5 canvas tag.</canvas>
       }
       DrawBoard();
       DisplayBag();
+    }
+  }
+  
+  function RotateBoard(ang){
+    if (ang == "toggle") {
+      if (boardRotation == 0) {
+        ang = 90;
+      }
+      if (boardRotation == 90) {
+        ang = -90;
+      }
+      if (boardRotation == -90) {
+        ang = 0;
+      }
+    }
+    if (ang == -90) {
+      document.getElementById("myCanvas").style.transform="rotate(-90deg) translate(125px,125px)";
+      boardRotation = -90;
+    }
+    if (ang == 0) {
+      document.getElementById("myCanvas").style.transform="";
+      boardRotation = 0;
+    }
+    if (ang == 90) {
+      document.getElementById("myCanvas").style.transform="rotate(90deg) translate(-125px,-125px)";
+      boardRotation = 90;
     }
   }
   
