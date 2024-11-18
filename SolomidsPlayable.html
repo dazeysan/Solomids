@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Solomids</title>
+
+<!-- Copyright 2023 dazeysan -->
+<!-- Still need to remove unused Ricochet Pyramids code -->
+
+  <script>
+    // Copyright for the random seed code:
+    /*
+    Copyright 2014 David Bau.
+
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    */
+
+    (function (pool, math) {
+    //
+    // The following constants are related to IEEE 754 limits.
+    //
+
+    // Detect the global object, even if operating in strict mode.
+    // http://stackoverflow.com/a/14387057/265298
+    var global = (0, eval)('this'),
+        width = 256,        // each RC4 output is 0 <= x < 256
+        chunks = 6,         // at least six RC4 outputs for each double
+        digits = 52,        // there are 52 significant digits in a double
+        rngname = 'random', // rngname: name for Math.random and Math.seedrandom
+        startdenom = math.pow(width, chunks),
+        significance = math.pow(2, digits),
+        overflow = significance * 2,
+        mask = width - 1,
+        nodecrypto;         // node.js crypto module, initialized at the bottom.
+
+    //
+    // seedrandom()
+    // This is the seedrandom function described above.
+    //
+    function seedrandom(seed, options, callback) {
+      var key = [];
+      options = (options == true) ? { entropy: true } : (options || {});
+
+      // Flatten the seed string or build one from local entropy if needed.
+      var shortseed = mixkey(flatten(
+        options.entropy ? [seed, tostring(pool)] :
+        (seed == null) ? autoseed() : seed, 3), key);
+
+      // Use the seed to initialize an ARC4 generator.
+      var arc4 = new ARC4(key);
+
+      // This function returns a random double in [0, 1) that contains
+      // randomness in every bit of the mantissa of the IEEE 754 value.
+      var prng = function() {
+        var n = arc4.g(chunks),             // Start with a numerator n < 2 ^ 48
+            d = startdenom,                 //   and denominator d = 2 ^ 48.
+            x = 0;                          //   and no 'extra last byte'.
+        while (n < significance) {          // Fill up all significant digits by
+          n = (n + x) * width;              //   shifting numerator and
+          d *= width;                       //   denominator and generating a
+          x = arc4.g(1);                    //   new least-significant-byte.
+        }
+        while (n >= overflow) {             // To avoid rounding up, before adding
+          n /= 2;                           //   last byte, shift everything
+          d /= 2;                           //   right using integer math until
+          x >>>= 1;                         //   we have exactly the desired bits.
+        }
+        return (n + x) / d;                 // Form the number within [0, 1).
+      };
+
+      prng.int32 = function() { return arc4.g(4) | 0; }
+      prng.quick = function() { return arc4.g(4) / 0x100000000; }
+      prng.double = prng;
+
+      // Mix the randomness into accumulated entropy.
+      mixkey(tostring(arc4.S), pool);
+
+      // Calling convention: what to return as a function of prng, seed, is_math.
+      return (options.pass || callback ||
+          function(prng, seed, is_math_call, state) {
+            if (state) {
+              // Load the arc4 state from the given state if it has an S array.
+              if (state.S) { copy(state, arc4); }
+              // Only provide the .state method if requested via options.state.
+              prng.state = function() { return copy(arc4, {}); }
+            }
+
+            // If called as a method of Math (Math.seedrandom()), mutate
+            // Math.random because that is how seedrandom.js has worked since v1.0.
+            if (is_math_call) { math[rngname] = prng; return seed; }
+
+            // Otherwise, it is a newer calling convention, so return the
+            // prng directly.
+            else return prng;
+          })(
+      prng,
+      shortseed,
+      'global' in options ? options.global : (this == math),
+      options.state);
+    }
+    math['seed' + rngname] = seedrandom;
+
+    //
+    // ARC4
+    //
+    // An ARC4 implementation.  The constructor takes a key in the form of
+    // an array of at most (width) integers that should be 0 <= x < (width).
+    //
+    // The g(count) method returns a pseudorandom integer that concatenates
+    // the next (count) outputs from ARC4.  Its return value is a number x
+    // that is in the range 0 <= x < (width ^ count).
+    //
+    function ARC4(key) {
+      var t, keylen = key.length,
+          me = this, i = 0, j = me.i = me.j = 0, s = me.S = [];
+
+      // The empty key [] is treated as [0].
+      if (!keylen) { key = [keylen++]; }
+
+      // Set up S using the standard key scheduling algorithm.
+      while (i < width) {
+        s[i] = i++;
+      }
+      for (i = 0; i < width; i++) {
+        s[i] = s[j = mask & (j + key[i % keylen] + (t = s[i]))];
+        s[j] = t;
+      }
+
+      // The "g" method returns the next (count) outputs as one number.
+      (me.g = function(count) {
+        // Using instance members instead of closure state nearly doubles speed.
+        var t, r = 0,
+            i = me.i, j = me.j, s = me.S;
+        while (count--) {
+          t = s[i = mask & (i + 1)];
+          r = r * width + s[mask & ((s[i] = s[j = mask & (j + t)]) + (s[j] = t))];
+        }
+        me.i = i; me.j = j;
+        return r;
+        // For robust unpredictability, the function call below automatically
+        // discards an initial batch of values.  This is called RC4-drop[256].
+        // See http://google.com/search?q=rsa+fluhrer+response&btnI
+      })(width);
+    }
+
+    //
+    // copy()
+    // Copies internal state of ARC4 to or from a plain object.
+    //
+    function copy(f, t) {
+      t.i = f.i;
+      t.j = f.j;
+      t.S = f.S.slice();
+      return t;
+    };
+
+    //
+    // flatten()
+    // Converts an object tree to nested arrays of strings.
+    //
+    function flatten(obj, depth) {
+      var result = [], typ = (typeof obj), prop;
+      if (depth && typ == 'object') {
+        for (prop in obj) {
+          try { result.push(flatten(obj[prop], depth - 1)); } catch (e) {}
+        }
+      }
+      return (result.length ? result : typ == 'string' ? obj : obj + '\0');
+    }
+
+    //
+    // mixkey()
+    // Mixes a string seed into a key that is an array of integers, and
+    // returns a shortened string seed that is equivalent to the result key.
+    //
+    function mixkey(seed, key) {
+      var stringseed = seed + '', smear, j = 0;
+      while (j < stringseed.length) {
+        key[mask & j] =
+          mask & ((smear ^= key[mask & j] * 19) + stringseed.charCodeAt(j++));
+      }
+      return tostring(key);
+    }
+
+    //
+    // autoseed()
+    // Returns an object for autoseeding, using window.crypto and Node crypto
+    // module if available.
+    //
+    function autoseed() {
+      try {
+        var out;
+        if (nodecrypto && (out = nodecrypto.randomBytes)) {
+          // The use of 'out' to remember randomBytes makes tight minified code.
+          out = out(width);
+        } else {
+          out = new Uint8Array(width);
+          (global.crypto || global.msCrypto).getRandomValues(out);
+        }
+        return tostring(out);
+      } catch (e) {
+        var browser = global.navigator,
+            plugins = browser && browser.plugins;
+        return [+new Date, global, plugins, global.screen, tostring(pool)];
+      }
+    }
+
+    //
+    // tostring()
+    // Converts an array of charcodes to a string
+    //
+    function tostring(a) {
+      return String.fromCharCode.apply(0, a);
+    }
+
+    //
+    // When seedrandom.js is loaded, we immediately mix a few bits
+    // from the built-in RNG into the entropy pool.  Because we do
+    // not want to interfere with deterministic PRNG state later,
+    // seedrandom will not call math.random on its own again after
+    // initialization.
+    //
+    mixkey(math.random(), pool);
+
+    //
+    // Nodejs and AMD support: export the implementation as a module using
+    // either convention.
+    //
+    if ((typeof module) == 'object' && module.exports) {
+      module.exports = seedrandom;
+      // When in node.js, try using crypto package for autoseeding.
+      try {
+        nodecrypto = require('crypto');
+      } catch (ex) {}
+    } else if ((typeof define) == 'function' && define.amd) {
+      define(function() { return seedrandom; });
+    }
+
+    // End anonymous scope, and pass initial values.
+    })(
+      [],     // pool: entropy pool starts empty
+      Math    // math: package containing random, pow, and seedrandom
+    );
+
+  </script>
+  
+  <style>
+  @font-face {
+    font-family: 'PyramidLove';
+    src: url('Pyramid-Love-3.1.woff');
+  }
+  
+   /* The container must be positioned relative: */
+  .custom-select {
+    position: relative;
+    font-family: Arial;
+    border: 1px solid #000000
+  }
+
+  .custom-select select {
+    display: none; /*hide original SELECT element: */
+  }
+
+  .select-selected {
+    background-color: White;
+  }
+
+  /* Style the arrow inside the select element: */
+  .select-selected:after {
+    position: absolute;
+    content: "";
+    top: 14px;
+    right: 10px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-color: #000000 transparent transparent transparent;
+  }
+
+  /* Point the arrow upwards when the select box is open (active): */
+  .select-selected.select-arrow-active:after {
+    border-color: transparent transparent #fff transparent;
+    top: 7px;
+  }
+
+  /* style the items (options), including the selected item: */
+  .select-items div,.select-selected {
+    color: #000000;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
+    cursor: pointer;
+  }
+
+  /* Style items (options): */
+  .select-items {
+    position: absolute;
+    background-color: White;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    border: 2px solid black;
+  }
+
+  /* Hide the items when the select box is closed: */
+  .select-hide {
+    display: none;
+  }
+
+  .select-items div:hover, .same-as-selected {
+    background-color: rgba(0, 0, 0, 0.1);
+  } 
+    
+  /* Styling for multi-color svgs */
+  .icon-two-part.style1 {
+    --color-1: #ff0000;
+    --color-2: #000000;
+    --color-3: #000000;
+    --color-4: #ffffff;
+    --stroke-1: 10;
+    --stroke-2: 0;
+  }
+  </style>
+  
+</head>
+<body>
+
+<button type="button" onClick="Javascript:SeedGame();">Seeded Game</button>
+<input type="text" id="seedbox" onkeypress="return enterKeySeed(event)"></input>
+<button type="button" onClick="Javascript:NewGame();">Random Game</button>
+<br/>
+<br/>
+<div style="display: table;">
+  <div style="display: table-row;">
+    <div class="custom-select" style="width:200px; display: table-cell;">
+      <select id="stashSelector">
+        <option value="0">Select pyramid colors:</option>
+        <option value="1">Rainbow Stash</option>
+        <option value="2">Xeno Stash</option>
+        <option value="3">Test Stash</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="custom-select" style="width:200px; display: table-cell;">
+      <select id="backgroundSelector">
+        <option value="0">Select board colors:</option>
+        <option value="1">Black & White</option>
+        <option value="2">White & Black</option>
+        <option value="3">White & Light Blue</option>
+        <option value="4">Peach & Grey</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+  </div>
+  <div style="display: table-row;">
+    <div style="display: table-cell;">
+      <div id="customStashColorPickerDiv" style="display: none;">
+        <input type="color" id="customStashColorPicker1" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+     --><input type="color" id="customStashColorPicker2" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+     --><input type="color" id="customStashColorPicker3" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+     --><input type="color" id="customStashColorPicker4" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+     --><input type="color" id="customStashColorPicker5" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><br/><br/>
+        <!--<input type="button" value="Save custom stash" />-->
+      </div>
+    </div>
+    <div style="display: table-cell;">
+      <div id="customBoardColorPickerDiv" style="display: none; text-align: center;">
+        <input type="color" id="customBoardColorPicker0" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" /><!--
+    --><input type="color" id="customBoardColorPicker1" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" />
+      </div>
+    </div>
+  </div>
+  <div style="display: table-row;">
+    <div style="display: table-cell;">
+      <input type="checkbox" id="checkShadow" onClick="javascript:{setStyle('shadow');}" /><label for="checkShadow">Shadow</label><!--
+   --><input type="checkbox" id="checkShadowInverted" onClick="javascript:{setStyle('shadowinverted');}" /><label for="checkShadowInverted">Inverted</label><br/>
+      <input type="checkbox" id="checkOutline" onClick="javascript:{setStyle('outline');}" /><label for="checkOutline">Outline</label><!--
+   --><input type="checkbox" id="checkOutlineInverted" onClick="javascript:{setStyle('outlineinverted');}" /><label for="checkOutlineInverted">Inverted</label><br/>
+    </div>
+    <div style="display: table-cell;">
+      <!-- empty -->
+    </div>
+  </div>
+</div>
+<br/>
+<div id="status"></div>
+<br/>
+
+<div id="bank" style="background-color: lightskyblue; width: 250px; border: 2px solid black;">
+  
+</div>
+<div id="toolbar" style="background-color: lightskyblue; width: 250px; border: 2px solid black;">
+  <span style="">&nbsp;<input type="button" value="↶" style="font-size: 3em; font-weight: bold; margin: 5px;" onClick="javascript:{UndoLast();};"/></span>
+</div>
+
+
+  
+<div style="position: relative; height: 500px;">
+  <canvas id="canvasBoard" width="250" height="500" style="position: absolute; z-index: 100; border:2px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+  <canvas id="canvasMiddle" width="250" height="500" style="position: absolute; z-index: 200; "></canvas>
+  <canvas id="canvasPieces" width="250" height="500" style="position: absolute; z-index: 300; "></canvas>
+  <canvas id="canvasAnim" width="250" height="500" style="position: absolute; z-index: 400; "></canvas>
+</div>
+<br/>
+<br/>
+
+
+<div>
+<button type="button" onClick="Javascript:ResetBoard();DrawBoard();">Clear Board</button>
+ - <a id="download" download="image.png"><button type="button" onClick="download()">Download Image</button></a>
+ - <button type="button" onClick="Javascript:RotateBoard('toggle');">Rotate Board</button>
+</div>
+<br/>
+<br/>
+<br/>
+<br/>
+
+<!--
+<div style="width: 250px; height: 200px; border: 2px solid black; background: #aaaaaa;">
+  <svg  class="icon-two-part style1" style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="24px" height="24px" fill="green">
+    <use href="#Pawn-icon"></use>
+  </svg>
+  <svg  class="icon-two-part style1" style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green">
+    <use href="#Drone-icon"></use>
+  </svg>
+  <svg  class="icon-two-part style1" style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="40px" height="40px" fill="green">
+    <use href="#Queen-icon"></use>
+  </svg>
+</div>
+-->
+
+  
+<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="swap-icon"  viewBox="0 0 32 32">
+    <path d="M0 30.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM0.032 10.368q-0.096-0.608 0.128-1.152t0.704-0.864 1.152-0.352h1.984q0-2.464 1.76-4.224t4.256-1.76h4q0.704 0 1.216 0.416t0.64 0.992 0 1.184-0.64 0.992-1.216 0.416h-4q-0.832 0-1.44 0.576t-0.576 1.408h2.016q0.64 0 1.152 0.384t0.704 0.864 0.096 1.12-0.544 1.056l-4 4q-0.64 0.608-1.44 0.608t-1.376-0.608l-4-4q-0.48-0.448-0.576-1.056zM4 28h4v-4h-4v4zM16.128 28.608q-0.096-0.608 0-1.184t0.64-0.992 1.248-0.416h4q0.8 0 1.408-0.576t0.576-1.44h-1.984q-0.672 0-1.184-0.352t-0.704-0.896-0.096-1.12 0.576-1.024l4-4q0.608-0.608 1.408-0.608t1.408 0.576l4 4q0.48 0.48 0.576 1.088t-0.16 1.12-0.704 0.864-1.12 0.352h-2.016q0 2.496-1.76 4.256t-4.224 1.76h-4q-0.736 0-1.248-0.416t-0.64-0.992zM20 10.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM24 8h4v-4h-4v4z"></path>
+  </symbol>
+</svg>
+<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="Pawn-icon" viewBox="-5 -5 147.6 178.9">
+  <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M137.1,159.8L74.9,4.2c-1-2.5-3.4-4.2-6.2-4.2s-5.2,1.6-6.2,4.2L.5,159.8c-.8,2-.6,4.4.7,6.2,1.2,1.8,3.3,2.9,5.5,2.9h124.3c2.2,0,4.3-1.1,5.5-2.9,1.2-1.8,1.5-4.1.7-6.2h0Z"/>
+  <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M79.1,133.8c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
+  </symbol>
+</svg>
+<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="Drone-icon" viewBox="-5 -5 188.8 242.1">
+    <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M178.4,223.1L95.6,4.3c-1-2.6-3.4-4.3-6.2-4.3s-5.2,1.7-6.2,4.3L.4,223.1c-.8,2-.5,4.3.7,6.1,1.2,1.8,3.3,2.9,5.5,2.9h165.6c2.2,0,4.2-1.1,5.5-2.9,1.2-1.8,1.5-4.1.8-6.1h0Z"/>
+    <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M53.4,207.9c-6,0-10.9-4.9-10.9-10.9,0-.3,0-.7,0-1h0s0,0,0-.1c.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.4,0,.7,0,1,0,6-4.9,10.9-10.9,10.9ZM94,197c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0s0,0,0,0c6,0,10.9-4.9,10.9-10.9Z"/>
+  </symbol>
+</svg>
+<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="Queen-icon" viewBox="-5 -5 242.2 283.1">
+    <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M231.7,263.9L122.2,4.1c-1-2.5-3.4-4.1-6.1-4.1s-5.1,1.6-6.1,4.1L.5,263.9c-.9,2.1-.6,4.4.6,6.2s3.3,3,5.5,3h219c2.2,0,4.3-1.1,5.5-3s1.5-4.2.6-6.2h0Z"/>
+    <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M83.4,248.9c-6,0-10.9-4.9-10.9-10.9s0-.7,0-1c0,0,0-.1,0-.1.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.3,0,.7,0,1h0c0,6-4.9,10.9-10.9,10.9ZM42.8,238c0,6,4.9,10.9,10.9,10.9s10.9-4.9,10.9-10.9,0-.6,0-1c0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1h0c0,.4,0,.7,0,1ZM124.1,238c0-.3,0-.6,0-1,0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
+  </symbol>
+</svg>
+<script>
+ 
+  var seed=0;
+  var startingPieces = "";
+  var boardWidth = 5;
+  var boardHeight = 10;
+  var cellWidth = 50;
+  var cellHeight = 50;
+  var fontSizeRatio = 0.8;
+  var styleDropShadow = false;
+  var styleShadowInverted = false;
+  var styleOutline = false;
+  var styleOutlineInverted = false;
+  var stashColors = [ 
+    ["Select pyramid colors:"], 
+    ["Rainbow Stash", "#ff0000", "#d3d319", "#008000", "#0000ff", "#000000"], 
+    ["Xeno Stash", "#00ffff", "#800080", "#ffa500", "#eeeeee", "#555555"], 
+    ["Test Stash", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
+  ];  //the Xeno stash should be clear and opaque white, not greys
+  var boardColors = [
+    ["", "", "Select board colors:"],
+    ["#000000", "#ffffff", "Black & White"],
+    ["#ffffff", "#000000", "White & Black"],
+    ["#ffffff", "#bbddff", "White & Light Blue"],
+    ["#ffdab9", "#858585", "Peach & Grey"]
+  ];
+  var customStashColor = [];
+  var customBoardColor = [];
+  var boardRotation = 0;
+  var colNames = ["A", "B", "C", "D", "E"];
+  var rowNames = ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"];
+  var drawInnerLabels = false;
+    
+  var board;
+  var bag = [];
+  var pieces = [];
+  var clickMode = "none";
+  var selectedCell = [-1, -1];
+  var swap1 = [-1, -1];
+  var swapsUsed = 0;
+  
+  var moveHistory = [];
+  var moveHist = [];
+  
+  var bank = [];
+  var score = 0;
+
+  //var pyramidColors=["#cc79a7", "#069f73", "#e79f27"];  //Color blind friendly Purple, Green, Orange
+  var pyramidColors=[...stashColors[1]];
+  var fillColors=[...boardColors[1]];
+  var pyramidSizes=["none", "pawn", "drone", "queen"];  //slot 0 is for 1-index padding
+  //var towers=[ [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0] ];
+  //var pyramids=[ [0,0],[0,0],[0,0] ];
+  //var editShape="";
+  //var editPyramid="purple";
+  //var editActive=false;
+  //var bggAnswerBox=false;
+  
+  
+  function DrawBoard(){
+    // Draw the board
+    var c=document.getElementById("canvasBoard");
+    c.width = boardWidth*cellWidth;
+    c.height = boardHeight*cellHeight;
+    var ctx=c.getContext("2d");
+    ctx.beginPath();
+    ctx.fillStyle=fillColors[0];
+    ctx.fillRect(0,0 ,boardWidth*cellWidth,boardHeight*cellHeight);
+    ctx.strokeStyle="#000000";
+    ctx.fillStyle=fillColors[1];
+    ctx.setLineDash([]);
+
+
+    for(i=0;i<boardWidth;i++) {
+      for(j=0;j<boardHeight;j++) {
+        // Draw the squares
+        for(var row=0;row<boardHeight;row++) {
+          for(var col=0; col<boardWidth;col+=2) {
+            startX = col * cellWidth;
+            if(row%2==0) {
+              startX = (col+1) * cellWidth;
+            }
+            ctx.fillRect(startX + left,(row*cellHeight) ,cellWidth,cellHeight);
+          }
+        }
+        if (drawInnerLabels) {
+          //Draw the cell labels inside the cells
+          for(var row=0;row<boardHeight;row++) {
+            for(var col=0; col<boardWidth;col++) {
+              tmpLabel = colNames[col]+rowNames[row];
+              //ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
+              ctx.textBaseline = 'top';
+              //ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+              ctx.fillText  (tmpLabel, (cellWidth*col)+5, (cellHeight*row)+5);
+
+            }
+          }
+        }
+        ctx.moveTo(0,cellHeight*j);
+        ctx.lineTo(boardWidth*cellWidth,cellHeight*j);
+        ctx.stroke();
+     
+        ctx.moveTo(cellWidth*i,0);
+        ctx.lineTo(cellWidth*i,boardHeight*cellHeight);
+        ctx.stroke();
+        var left = 0;
+      }
+    }
+    ctx.moveTo(0,boardHeight*cellHeight);
+    ctx.lineTo(boardWidth*cellWidth,boardHeight*cellHeight);
+    ctx.stroke();
+ 
+    ctx.moveTo(boardWidth*cellWidth,0);
+    ctx.lineTo(boardWidth*cellWidth,boardHeight*cellHeight);
+    ctx.stroke();
+    
+    <!-- ctx.font = cellHeight*fontSizeRatio+'px PyramidLove'; -->
+    <!-- ctx.fillStyle = 'orangered'; -->
+    <!-- ctx.textBaseline = 'top'; -->
+    <!-- ctx.fillText  ('\ue99e', (cellWidth-ctx.measureText('\ue99e').width)/2, cellHeight*((1-fontSizeRatio)/2)); -->
+    <!-- ctx.fillText  ('\ue927', (cellWidth*((1-fontSizeRatio)/2))+cellWidth, cellHeight*((1-fontSizeRatio)/2)); -->
+    <!-- ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth+cellWidth, cellHeight*((1-fontSizeRatio)/2)); -->
+    
+  }
+
+  
+  function ResetBoard() {
+    //board = [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], ];
+    bag = [ 11, 11, 11, 12, 12, 12, 13, 13, 13, 21, 21, 21, 22, 22, 22, 23, 23, 23, 31, 31, 31, 32, 32, 32, 33, 33, 33, 41, 41, 41, 42, 42, 42, 43, 43, 43, 51, 51, 51, 52, 52, 52, 53, 53, 53 ];
+    board = [ [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0] ];
+    var c=document.getElementById("canvasPieces");
+    var ctx=c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+    var m=document.getElementById("canvasMiddle");
+    var midctx=m.getContext("2d");
+    midctx.clearRect(0, 0, m.width, m.height);
+    selectedCell = [-1, -1];
+    clickMode = "none";
+    moveHistory = [];
+    moveHist = [];
+    bank = [];
+    swapsUsed = 0;
+    swap1 = [-1, -1];
+    UpdateBank();
+  }
+  ResetBoard();
+    
+  function AddShape(shape, color, x, y) {
+    //console.log("AddShape("+shape+","+color+","+x+","+y+")");
+    targetX = x;
+    targetY = y;
+    var c=document.getElementById("canvasPieces");
+    var ctx=c.getContext("2d");
+    ctx.strokeStyle="#000000";
+    ctx.lineWidth=1;
+    if (styleDropShadow) {
+      if (styleShadowInverted) {
+        //ctx.shadowColor=invertColor(fillColors[(x+y)%2], true);
+        ctx.shadowColor=fillColors[(x+y+1)%2];
+      } else {
+        ctx.shadowColor="white";
+      }
+      ctx.shadowBlur=7;
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle=color;
+    ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
+    ctx.textBaseline = 'top';
+
+    if (shape=="pawn") {
+      ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      if (styleOutline) {
+        if (styleOutlineInverted) {
+          ctx.strokeStyle=fillColors[(x+y+1)%2];
+        }
+        ctx.strokeText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+    }
+
+    if (shape=="drone") {
+      ctx.fillText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      if (styleOutline) {
+        if (styleOutlineInverted) {
+          ctx.strokeStyle=fillColors[(x+y+1)%2];
+        }
+        ctx.strokeText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+    }
+
+    if (shape=="queen") {
+      ctx.fillText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      if (styleOutline) {
+        if (styleOutlineInverted) {
+          ctx.strokeStyle=fillColors[(x+y+1)%2];
+        }
+        ctx.strokeText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+      }
+    }
+    
+    if (shape=="pyramid") {
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.moveTo(sx+25, sy+10);
+      ctx.lineTo(sx+15, sy+40);
+      ctx.lineTo(sx+35, sy+40);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+    }
+
+    if (shape=="active-pyramid") {
+      ctx.setLineDash([5, 3]);
+      ctx.strokeStyle=color;
+      ctx.lineWidth=2;
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.moveTo(sx+25, sy+2);
+      ctx.lineTo(sx+10, sy+43);
+      ctx.lineTo(sx+40, sy+43);
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    if (shape=="square") {
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.rect(sx+5,sy+5,40,40);
+      ctx.stroke();
+      ctx.fill();
+    }
+
+    if (shape=="circle") {
+      sx = x*50;
+      sy = y*50;
+      ctx.beginPath();
+      ctx.arc(sx+25,sy+25,20,0,2*Math.PI);
+      ctx.stroke();
+      ctx.fill();
+    }
+  }
+  
+  function ShuffleBag() {
+    console.log("ShuffleBag()");
+    //document.getElementById("status").innerHTML="<span style='font-family: PyramidLove'>\ue91c</span>";
+    document.getElementById("status").innerHTML="";
+    var newBag=[];
+    var p=45;
+    var usedPieces = [-1, 0, 0, 0];
+    var tmpSizeErrors = 0;
+    var tmpSizeRowErrors = 0;
+    var tmpMatchErrors = 0;
+    var tmpSizeDistErrors = 0;
+    var keepTrying = true;
+    var tmpRow = [];
+    var tmpRow2 = [];
+    
+    do {
+      for (row=0; row<9; row++) {
+        tmpRow = [-1, 0, 0, 0];
+        for (col=0; col<5; col++) {
+          keepTrying=true;
+          do {
+            tmpRand=Math.floor(Math.random()*p);
+            console.log(tmpRand);
+            tmpSize=bag[tmpRand].toString()[1];
+            tmpError=false;
+            if (usedPieces[tmpSize] - row >= 7) {
+              // Make sure there is at least 1 piece left of this size for each of the rows bellow.
+              tmpSizeErrors++;
+              console.log("Size Error "+tmpSizeErrors);
+              tmpError=true;
+            }
+            if (tmpRow[tmpSize]>=3) {
+              // Make sure there are at most 3 of a given size in each row.
+              tmpSizeRowErrors++;
+              console.log("Size in row Error "+tmpSizeRowErrors+"--"+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              tmpError=true;
+            }
+            if (bag[tmpRand] == newBag[newBag.length-1] && col != 0) {
+              // Make sure no piece matches its neighbor to the left
+              tmpMatchErrors++;
+              console.log("New piece matches previous in same row "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              tmpError=true;
+            }
+            tmpRow2=[...tmpRow];
+            tmpRow2[tmpSize]++;
+            if (col == 4 && tmpRow2.includes(0)) {
+              // Make sure there is at least 1 of each size in the row.
+              tmpSizeDistErrors++;
+              console.log("Missing a certain size in this row. "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              tmpError=true;
+            }
+            
+            if (!tmpError) {
+              console.log("Good Pull "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+              usedPieces[tmpSize]++;
+              newBag.push(bag.splice((tmpRand), 1)[0]);
+              tmpRow[tmpSize]++;
+              keepTrying=false;
+            }
+
+            console.log(usedPieces+","+p+","+row+","+col+" || "+tmpRow);
+            if (tmpSizeErrors >= 100 || tmpSizeRowErrors >= 100 || tmpMatchErrors >= 100) {
+              console.log("Too many Errors, breaking");
+              document.getElementById("status").innerHTML="Can't randomize board with this seed.";
+              return(0);
+            }
+          } while (keepTrying);
+          
+          p--;
+        }
+      }
+    } while (p>0);
+    bag=newBag;
+    pieces = [[], [], [], [], []];
+    for (b=0; b<bag.length; b++) {
+      pieces[b+5]=[bag[b]];
+    }
+    console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors+", "+tmpSizeDistErrors);
+  }
+  
+  function DisplayPieces() {
+    ClearPieces();
+    var pos=0;
+    for (row=0; row<=9; row++) {  
+      for (col=0; col<=4; col++) {
+        for (stack=0; stack<pieces[pos].length; stack++) {
+          //console.log("stack: "+stack);
+          //console.log("pieces["+pos+"]");
+          if (pieces[pos] != []) {
+            tmpColor=pyramidColors[pieces[pos][stack].toString()[0]];
+            tmpShape=pyramidSizes[pieces[pos][stack].toString()[1]];
+            var tmpRow = row-(0.2*stack);
+            AddShape(tmpShape, tmpColor, col, tmpRow);
+          }
+        }
+        pos++;
+      }
+    }
+  }
+  
+  function SetStashColor() {
+    var selector = document.getElementById("stashSelector").value;
+    if (selector == "custom") {
+      document.getElementById("customStashColorPickerDiv").style.display="";
+      if (customStashColor.length == 0) {
+        document.getElementById("customStashColorPicker1").value=pyramidColors[1];
+        document.getElementById("customStashColorPicker2").value=pyramidColors[2];
+        document.getElementById("customStashColorPicker3").value=pyramidColors[3];
+        document.getElementById("customStashColorPicker4").value=pyramidColors[4];
+        document.getElementById("customStashColorPicker5").value=pyramidColors[5];
+      } else {
+        document.getElementById("customStashColorPicker1").value=customStashColor[1];
+        document.getElementById("customStashColorPicker2").value=customStashColor[2];
+        document.getElementById("customStashColorPicker3").value=customStashColor[3];
+        document.getElementById("customStashColorPicker4").value=customStashColor[4];
+        document.getElementById("customStashColorPicker5").value=customStashColor[5];
+        pyramidColors=[...customStashColor];
+      }
+    } else {
+      document.getElementById("customStashColorPickerDiv").style.display="none";
+      pyramidColors = [...stashColors[selector]];
+    }
+    saveSettings();
+    DrawBoard();
+    DisplayPieces();
+  }
+  
+  function SetCustomStashColor() {
+    pyramidColors[1] = document.getElementById("customStashColorPicker1").value;
+    pyramidColors[2] = document.getElementById("customStashColorPicker2").value;
+    pyramidColors[3] = document.getElementById("customStashColorPicker3").value;
+    pyramidColors[4] = document.getElementById("customStashColorPicker4").value;
+    pyramidColors[5] = document.getElementById("customStashColorPicker5").value;
+    customStashColor=[...pyramidColors];
+    customStashColor[0]="Custom-"+customStashColor[0];
+    saveSettings();
+    DrawBoard();
+    DisplayPieces();
+  }
+  
+  function SetBoardColor() {
+    var selector = document.getElementById("backgroundSelector").value;
+    if (selector == "custom") {
+      document.getElementById("customBoardColorPickerDiv").style.display="";
+      if (customBoardColor.length == 0) {
+        document.getElementById("customBoardColorPicker0").value=fillColors[0];
+        document.getElementById("customBoardColorPicker1").value=fillColors[1];
+      } else {
+        document.getElementById("customBoardColorPicker0").value=customBoardColor[0];
+        document.getElementById("customBoardColorPicker1").value=customBoardColor[1];
+        fillColors=[...customBoardColor];
+      }
+    } else {
+      document.getElementById("customBoardColorPickerDiv").style.display="none";
+      fillColors = [...boardColors[selector]];
+    }
+    saveSettings();
+    DrawBoard();
+    DisplayPieces();
+  }
+  
+  function SetCustomBoardColor() {
+    fillColors[0] = document.getElementById("customBoardColorPicker0").value;
+    fillColors[1] = document.getElementById("customBoardColorPicker1").value;
+    customBoardColor=[...fillColors];
+    customBoardColor[2]="Custom-"+customBoardColor[2];
+    saveSettings();
+    DrawBoard();
+    DisplayPieces();
+  }
+  
+  function DropClicked(id) {
+    console.log("DropClicked("+id+")");
+    if (id == "stashSelector") {
+      SetStashColor();
+    }
+    if (id == "backgroundSelector") {
+      SetBoardColor();
+    }
+  }
+  
+  function setStyle(type, redraw=true){
+    if (type == "shadow") {
+      styleDropShadow=document.getElementById("checkShadow").checked;
+    }
+    if (type == "shadowinverted") {
+      styleShadowInverted=document.getElementById("checkShadowInverted").checked; 
+      if (styleShadowInverted && !styleDropShadow) {
+        document.getElementById("checkShadow").checked=true; 
+        styleDropShadow=document.getElementById("checkShadow").checked; 
+      }
+    }
+    if (type == "outline") {
+      styleOutline=document.getElementById("checkOutline").checked;
+    }
+    if (type == "outlineinverted") {
+      styleOutlineInverted=document.getElementById("checkOutlineInverted").checked; 
+      if (styleOutlineInverted && !styleOutline) {
+        document.getElementById("checkOutline").checked=true; 
+        styleOutline=document.getElementById("checkOutline").checked; 
+      }
+    }
+    if (redraw) {
+      DrawBoard();
+      DisplayPieces();
+    }
+  }
+  
+  function RotateBoard(ang){
+    if (ang == "toggle") {
+      if (boardRotation == 0) {
+        ang = 90;
+      }
+      if (boardRotation == 90) {
+        ang = -90;
+      }
+      if (boardRotation == -90) {
+        ang = 0;
+      }
+    }
+    if (ang == -90) {
+      document.getElementById("canvasBoard").style.transform="rotate(-90deg) translate(125px,125px)";
+      document.getElementById("canvasPieces").style.transform="rotate(-90deg) translate(125px,125px)";
+      document.getElementById("canvasMiddle").style.transform="rotate(-90deg) translate(125px,125px)";
+      boardRotation = -90;
+    }
+    if (ang == 0) {
+      document.getElementById("canvasBoard").style.transform="";
+      document.getElementById("canvasPieces").style.transform="";
+      document.getElementById("canvasMiddle").style.transform="";
+      boardRotation = 0;
+    }
+    if (ang == 90) {
+      document.getElementById("canvasBoard").style.transform="rotate(90deg) translate(-125px,-125px)";
+      document.getElementById("canvasPieces").style.transform="rotate(90deg) translate(-125px,-125px)";
+      document.getElementById("canvasMiddle").style.transform="rotate(90deg) translate(-125px,-125px)";
+      boardRotation = 90;
+    }
+  }
+  
+  function NewGame() {
+    seed=Math.floor(Math.random()*100000).toString();
+    Math.seedrandom(seed);
+    document.getElementById("seedbox").value=seed;
+    ResetBoard();
+    DrawBoard();
+    //NewTowers();
+    //NewPyramids();
+    //NewTarget();
+    //NewActivePyramid();
+    ShuffleBag();
+    DisplayPieces();
+    startingPieces = JSON.stringify(pieces).replaceAll("[","").replaceAll("]","").replaceAll(",","");
+  }
+
+  function SeedGame() {
+    seed=document.getElementById("seedbox").value.toString();
+    Math.seedrandom(seed);
+    document.getElementById("seedbox").value=seed;
+    ResetBoard();
+    DrawBoard();
+    //NewTowers();
+    //NewPyramids();
+    //NewTarget();
+    //NewActivePyramid();
+    ShuffleBag();
+    DisplayPieces();
+    startingPieces = JSON.stringify(pieces).replaceAll("[","").replaceAll("]","").replaceAll(",","");
+  }
+  
+  function AddCellHighlight(col, row) {
+    console.log("AddCellHighlight()");
+    var m=document.getElementById("canvasMiddle");
+    var midctx=m.getContext("2d");
+    midctx.lineWidth = 8;
+    midctx.strokeStyle = "pink";
+    midctx.strokeRect(col*cellWidth, row*cellHeight, cellWidth, cellHeight);
+  }
+    
+  function SetCellHighlight(col, row) {
+    ClearCellHighlights();
+    AddCellHighlight(col, row);
+  }
+    
+  function ClearCellHighlights() {
+    var m=document.getElementById("canvasMiddle");
+    var midctx=m.getContext("2d");
+    midctx.clearRect(0, 0, m.width, m.height);
+  }
+    
+  function ClearPieces() {
+    var p=document.getElementById("canvasPieces");
+    var pcsctx=p.getContext("2d");
+    pcsctx.clearRect(0, 0, p.width, p.height);
+  }
+  
+  function UpdateBank() {
+    if (bank.length < 15) {
+      score = bank.length;
+    } else {
+      score = bank.length + 2 - swapsUsed;
+    }
+    tmpGrid = ["blank", 0, 0, 0, 0, 0];
+    tmpSwap1 = false;
+    tmpSwap2 = false;
+    var tmpHtml = "Score: "+score+"<br/>";
+    for (b=0; b<bank.length; b++) {
+      var tmpColorNum = bank[b][0].toString()[0];
+      tmpGrid[tmpColorNum]++;
+    }
+    if (tmpGrid[1] >= 1 && tmpGrid[2] >= 1 && tmpGrid[3] >= 1 && tmpGrid[4] >= 1 && tmpGrid[5] >= 1) {
+      tmpSwap1 = true;
+    }
+    if (tmpGrid[1] >= 2 && tmpGrid[2] >= 2 && tmpGrid[3] >= 2 && tmpGrid[4] >= 2 && tmpGrid[5] >= 2) {
+      tmpSwap2 = true;
+    }
+    for (s=1; s<=3; s++) {
+      for (c=1; c<=5; c++) {
+        var tmpColor = pyramidColors[c];
+        if (tmpGrid[c] >= s) {
+          tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue9a0</span>";
+        } else {
+          tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue95f</span>";
+        }
+      }
+    if (s == 1) {
+      if (tmpSwap1 && swapsUsed < 1) {
+        //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+        tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
+      } else if (tmpSwap1 && swapsUsed >= 1) {
+        //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
+      } else {
+        //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
+      }
+    } else if (s == 2) {
+      if (tmpSwap2 && swapsUsed < 2) {
+        //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+        tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
+      } else if (tmpSwap2 && swapsUsed >= 2) {
+        //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
+      } else {
+        //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
+      }
+    }
+    tmpHtml += "<br/>";
+    }
+    document.getElementById("bank").innerHTML = tmpHtml;
+  }
+
+  function StartSwap() {
+    console.log("StartSwap()");
+    ClearCellHighlights();
+    selectedCell = [-1, -1];
+    setTimeout(() => {
+      clickMode = "swap";
+    }, 200);
+
+  }
+  
+  function UndoLast() {
+    console.log("UndoLast()");
+    if (moveHistory.length <= 0) {
+      console.log("No hisotry to undo.");
+      return;
+    }
+    tmpMove = moveHistory.pop();
+    moveHist.pop();
+    if (tmpMove[0] == "move" || tmpMove[0] == "top") {
+      pieces[tmpMove[1]] = pieces[tmpMove[1]].concat(tmpMove[2]);
+      pieces[tmpMove[3]] = pieces[tmpMove[3]].splice(0,pieces[tmpMove[3]].indexOf(tmpMove[2][0]));
+    } else if (tmpMove[0] == "slide") {
+      for (s=tmpMove[1].length-1; s>=0; s--) {
+        pieces[tmpMove[1][s][0]] = pieces[tmpMove[1][s][0]].concat(tmpMove[1][s][1]);
+        pieces[tmpMove[1][s][2]] = pieces[tmpMove[1][s][2]].splice(0,pieces[tmpMove[1][s][2]].indexOf(tmpMove[1][s][1][0]));
+      }
+    } else if (tmpMove[0] == "bank") {
+      pieces[tmpMove[1]] = bank[bank.length-1];
+      bank.pop();
+    } else if (tmpMove[0] == "swap") {
+      pieces[tmpMove[1]] = tmpMove[2];
+      pieces[tmpMove[3]] = tmpMove[4];
+      swapsUsed--;
+    }
+    UpdateBank();
+    DisplayPieces();
+    ClearCellHighlights();
+    selectedCell = [-1, -1];
+    clickMode = "none";
+  }
+  
+  function FullTreeSelected(col, row, type) {
+    console.log("FullTreeSelected("+col+", "+row+", "+type+")");
+    if (type == 2) {
+      //Tree was double-clicked
+      var tmpPos = (row * boardWidth)+col;
+      bank.push(pieces[tmpPos]);
+      moveHistory.push(["bank", tmpPos, pieces[tmpPos]]);
+      moveHist.push(["b", tmpPos, Number(pieces[tmpPos][0].toString()[0])]);
+      pieces[tmpPos] = [];
+      UpdateBank();
+      DisplayPieces();
+      ClearCellHighlights();
+      selectedCell = [-1, -1];
+      clickMode = "none";
+    }
+  }
+    
+  function boardClicked(event, type) {
+    var c = document.getElementById('canvasPieces');
+    const rect = c.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    //console.log("x: " + x + " y: " + y);
+    col=Math.ceil(x/cellWidth)-1;
+    row=Math.ceil(y/cellHeight)-1;
+    if(col == -1){ col = 0; }
+    if(row == -1){ row = 0; }
+    if(col == boardWidth){ col = boardWidth-1; }
+    if(row == boardHeight){ row = boardHeight-1; }
+    console.log("Row: " + row + " Col: " + col + " Type: " + type);
+    var tmpPos = (row * boardWidth)+col;
+    console.log("Pieces["+tmpPos+"]: "+pieces[tmpPos]);
+    if (clickMode == "none") {
+      console.log("clickMode: none");
+      if (pieces[tmpPos].length > 0) {
+        selectedCell = [col, row];
+        clickMode = "move";
+        SetCellHighlight(col, row);
+        if (pieces[tmpPos].length == 3) {
+          //A full tree is selected.
+          FullTreeSelected(col, row, type);
+        }
+      }
+    } else if (clickMode == "move") {
+      if (selectedCell[0] == col && selectedCell[1] == row) {
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        clickMode = "none";
+      } else {
+        MovePyramid(col, row);
+      }
+    } else if (clickMode == "swap") {
+      if (pieces[tmpPos].length > 0) {
+        if (swap1[0] == -1) {
+          swap1 = [col, row];
+          SetCellHighlight(col, row);
+        } else if (swap1[0] == col && swap1[1] == row) {
+          ClearCellHighlights();
+          swap1 = [-1, -1];
+        } else {
+          var tmpSwap = pieces[tmpPos];
+          var tmpPos2 = (swap1[1] * boardWidth)+swap1[0];
+          moveHistory.push(["swap", tmpPos, pieces[tmpPos], tmpPos2, pieces[tmpPos2]]);
+          moveHist.push(["w", tmpPos, tmpPos2]);
+          pieces[tmpPos] = pieces[tmpPos2];
+          pieces[tmpPos2] = tmpSwap;
+          swapsUsed++;
+          ClearCellHighlights();
+          swap1 = [-1, -1];
+          DisplayPieces();
+          UpdateBank();
+          clickMode = "none";
+        }
+      }
+    }
+  }
+  
+  function MovePyramid(targetCol, targetRow) {
+    var targetPos = (targetRow * boardWidth)+targetCol;
+    var oldCol = selectedCell[0];
+    var oldRow = selectedCell[1];
+    var oldPos = (oldRow * boardWidth)+oldCol;
+    console.log("MovePyramid: from: "+oldPos+" to: "+targetPos);
+    
+    var colorsOK = false;
+    var sizesOK = false;
+    var topMove = false;
+    var topMoveElev = -1;
+    var orthogOK = false;
+    var pathOK = false;
+    var slide = false;
+    
+    if (pieces[targetPos].length == 0) {
+      //Target cell is empty, are we sliding?
+      console.log("Target cell empty, slide?");
+      if ((oldCol == targetCol) && (oldRow > targetRow)) {
+        console.log("Columns match & target is above.");
+        if (oldRow == targetRow+1) {
+          //Target is directly above
+          console.log("Slide target immediately above.");
+          slide = true;
+        } else {
+          console.log("Slide target in same column but not adjacent");
+          var checkPath = true;
+          //Cells are 2 or more row apart with the target above
+          for (r=targetRow+1; r<oldRow; r++) {
+            var tmpPos = (r * boardWidth)+oldCol;
+            if (pieces[tmpPos].length != 0) {
+              checkPath = false;
+              break;
+            }
+          }
+          
+          slide = checkPath;
+          
+        }
+        console.log("Slide?: "+slide);
+      }
+      if (slide) {
+        console.log("We're Sliding!");
+        var slideTarget = -1;
+        for (t=targetRow; t>=0; t--) {
+          if (pieces[((t * boardWidth)+targetCol)].length == 0) {
+            slideTarget = t;
+          } else {
+            break;
+          }
+        }
+        console.log("SlideTarget: "+slideTarget);
+        slideDistance = oldRow-slideTarget;
+        console.log("Distance: "+slideDistance);
+        tmpHist = [];
+        for (r=oldRow; r<boardHeight; r++) {
+          tmpPos = (r * boardWidth)+targetCol;
+          if (pieces[tmpPos].length > 0) {
+            tmpHist.push([tmpPos, pieces[tmpPos], tmpPos-(slideDistance*boardWidth)]);
+            pieces[tmpPos-(slideDistance*boardWidth)] = pieces[tmpPos];
+            pieces[tmpPos] = [];
+          } else {
+            break;
+          }
+        }
+        moveHistory.push(["slide", tmpHist]);
+        moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
+        DisplayPieces();
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        clickMode = "none";
+      }
+    } else {
+      if (pieces[oldPos][0].toString()[0] == pieces[targetPos][0].toString()[0]) {
+        //The colors of the old and target pieces match
+        console.log("Colors Match");
+        colorsOK = true;
+      }
+      if (Number((pieces[oldPos][0].toString()[1]))+1 == Number(pieces[targetPos][pieces[targetPos].length-1].toString()[1])) {
+        //The size of the old piece is 1 smaller than the target piece
+        console.log("Old piece is 1 smaller than target piece");
+        sizesOK = true;
+      } else {
+        if (pieces[oldPos].length > 1) {
+          //The old tower has several pieces, check if we can move 1 or 2 of them instead of whole stack.
+          console.log("Old stack has more than 1 piece");
+          for (p=1; p<pieces[oldPos].length; p++) {
+            console.log(p);
+            if (Number((pieces[oldPos][p].toString()[1]))+1 == Number(pieces[targetPos][pieces[targetPos].length-1].toString()[1])) {
+              console.log("We can do a topMove");
+              topMove = true;
+              topMoveElev = p;
+            }
+          }
+        }
+      }
+      if ((oldCol == targetCol) || (oldRow == targetRow)) {
+        //The old and target cells share a column or row
+        orthogOK = true;
+
+        if (oldCol == targetCol) {
+          if ((oldRow == targetRow+1) || (oldRow == targetRow-1)) {
+            //Cells are directly above/below each other
+            pathOK = true;
+          } else {
+            console.log("Cells in same column but not adjacent");
+            var checkPath = true;
+            if (targetRow > oldRow) {
+              //Cells are 2 or more rows apart with the target bellow
+              console.log("Target cell bellow");
+              for (r=oldRow+1; r<targetRow; r++) {
+                //console.log(r);
+                var tmpPos = (r * boardWidth)+oldCol;
+                //console.log(tmpPos);
+                if (pieces[tmpPos].length != 0) {
+                  checkPath = false;
+                  break;
+                }
+              }
+            } else {
+              //Cells are 2 or more row apart with the target above
+              console.log("Target cell above");
+              for (r=targetRow+1; r<oldRow; r++) {
+                var tmpPos = (r * boardWidth)+oldCol;
+                if (pieces[tmpPos].length != 0) {
+                  checkPath = false;
+                  break;
+                }
+              }
+            }
+            pathOK = checkPath;
+          }
+        }
+        if (oldRow == targetRow) {
+          if ((oldCol == targetCol+1) || (oldCol == targetCol-1)) {
+            //Cells are side by side
+            pathOK = true;
+          } else {
+            console.log("Cells on same row but not adjacent");
+            var checkPath = true;
+            if (targetCol > oldCol) {
+              //Cells are 2 or more columns apart with the target on the right
+              console.log("Target cell on right");
+              for (c=oldCol+1; c<targetCol; c++) {
+                //console.log(c);
+                var tmpPos = (oldRow * boardWidth)+c;
+                //console.log(tmpPos);
+                if (pieces[tmpPos].length != 0) {
+                  checkPath = false;
+                  break;
+                }
+              }
+            } else {
+              //Cells are 2 or more columns apart with the target on the left
+              console.log("Target cell on left");
+              for (c=targetCol+1; c<oldCol; c++) {
+                var tmpPos = (oldRow * boardWidth)+c;
+                if (pieces[tmpPos].length != 0) {
+                  checkPath = false;
+                  break;
+                }
+              }
+            }
+            pathOK = checkPath;
+          }
+        }
+      }
+    
+      if (colorsOK && orthogOK && pathOK && (sizesOK || topMove)) {
+        if (sizesOK && !topMove) {
+          console.log("Move that Piece(s)!");
+          moveHistory.push(["move", oldPos, pieces[oldPos], targetPos]);
+          moveHist.push(["m", oldPos, targetPos]);
+          pieces[targetPos] = pieces[targetPos].concat(pieces[oldPos]);
+          pieces[oldPos] = [];
+        } else if (!sizesOK && topMove) {
+          console.log("Move that TOP Piece(s)!");
+          tmpStack = pieces[oldPos].slice(topMoveElev);
+          moveHistory.push(["top", oldPos, tmpStack, targetPos]);
+          moveHist.push(["t", oldPos, targetPos]);
+          pieces[oldPos] = pieces[oldPos].splice(0,topMoveElev);
+          pieces[targetPos] = pieces[targetPos].concat(tmpStack);                       
+        }
+        DisplayPieces();
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        clickMode = "none";
+      } else {
+        console.log("Colors: "+colorsOK+", Sizes: "+sizesOK+", Orthogonal: "+orthogOK+"/ Path: "+pathOK);
+        
+        selectedCell = [targetCol, targetRow];
+        clickMode = "move";
+        SetCellHighlight(targetCol, targetRow);
+      }
+    }
+  }
+
+  function GenerateHumanReadableHistory() {
+    hrHist = "";
+    for (h=0; h<moveHist.length; h++) {
+      hrHist += (h+1)+": ";
+      tmpCol1 = moveHist[h][1] % boardWidth;
+      tmpRow1 = Math.floor(moveHist[h][1]/boardWidth)+1;
+      tmpCol2 = moveHist[h][2] % boardWidth;
+      tmpRow2 = Math.floor(moveHist[h][2]/boardWidth)+1;
+      if (moveHist[h][0] == "m") {
+        hrHist += "Move ";
+        hrHist += colNames[tmpCol1]+rowNames[tmpRow1]+" to ";
+        hrHist += colNames[tmpCol2]+rowNames[tmpRow2];
+      }
+      if (moveHist[h][0] == "t") {
+        hrHist += "Top of ";
+        hrHist += colNames[tmpCol1]+rowNames[tmpRow1]+" to ";
+        hrHist += colNames[tmpCol2]+rowNames[tmpRow2];
+      }
+      if (moveHist[h][0] == "s") {
+        hrHist += "Slide ";
+        hrHist += colNames[tmpCol1]+rowNames[tmpRow1];
+      }
+      if (moveHist[h][0] == "b") {
+        hrHist += "Bank ";
+        hrHist += colNames[tmpCol1]+rowNames[tmpRow1];
+      }
+      if (moveHist[h][0] == "w") {
+        hrHist += "Swap ";
+        hrHist += colNames[tmpCol1]+rowNames[tmpRow1]+" with ";
+        hrHist += colNames[tmpCol2]+rowNames[tmpRow2];
+      }
+      hrHist += "\r\n";
+    }
+    return(hrHist);
+  }
+    
+//https://stackoverflow.com/questions/61461518/javascript-how-prevent-dblclick-double-click-to-also-fire-a-single-click-even
+var pendingClick;
+var clicked = 0;
+var time_dbclick = 300 // 300ms
+
+function myclick(event){
+  clicked++;
+  clearTimeout(pendingClick)
+  if(clicked >= 2){
+    boardClicked(event, 2);
+    clicked = 0;
+  } else {
+    pendingClick = setTimeout(() => {
+      console.log('One click!');
+      boardClicked(event, 1);
+      clicked = 0;
+    }, time_dbclick);
+  }
+}
+
+  const canvasPieces = document.getElementById('canvasAnim');
+  canvasPieces.addEventListener('click', function(event) {
+    myclick(event);
+    
+    var c = document.getElementById('canvasAnim');
+    const rect = c.getBoundingClientRect();
+    mouseX = event.clientX - rect.left;
+    mouseY = event.clientY - rect.top;
+    
+    //mouseX = event.clientX - rect.left;
+    //mouseY = event.clientY;
+    //ball.dx = (ball.x - mouseX) / stepWidthFactor * -10;
+    //ball.dy = (ball.y - mouseY) / stepWidthFactor * -10;
+  }, false);
+
+
+  const bankDiv = document.getElementById('bank');
+  document.addEventListener('click', event => {
+    const isClickInside = canvasPieces.contains(event.target)
+    const isClickInside2 = bankDiv.contains(event.target)
+    if (!isClickInside && !isClickInside2) {
+      // The click was outside of canvasPieces
+      ClearCellHighlights();
+      selectedCell = [-1, -1];
+      clickMode = "none";     
+    }
+  })
+  
+// http://stackoverflow.com/questions/11076975/insert-text-into-textarea-at-cursor-position-javascript
+function insertAtCursor(myField, myValue) {
+    //IE support
+    if (document.selection) {
+        myField.focus();
+        sel = document.selection.createRange();
+        sel.text = myValue;
+    }
+    //MOZILLA and others
+    else if (myField.selectionStart || myField.selectionStart == '0') {
+        var startPos = myField.selectionStart;
+        var endPos = myField.selectionEnd;
+        myField.value = myField.value.substring(0, startPos)
+            + myValue
+            + myField.value.substring(endPos, myField.value.length);
+        myField.selectionStart = startPos + myValue.length;
+        myField.selectionEnd = startPos + myValue.length;
+        myField.blur();
+    } else {
+        myField.value += myValue;
+        myField.blur();
+    }
+}
+  
+  //https://stackoverflow.com/questions/6620393/is-it-possible-to-alter-a-css-stylesheet-using-javascript-not-the-style-of-an
+  function adjustCSSRules(selector, props, sheets){
+  // get stylesheet(s)
+  if (!sheets) sheets = [...document.styleSheets];
+  else if (sheets.sup){    // sheets is a string
+    let absoluteURL = new URL(sheets, document.baseURI).href;
+    sheets = [...document.styleSheets].filter(i => i.href == absoluteURL);
+    }
+  else sheets = [sheets];  // sheets is a stylesheet
+
+  // CSS (& HTML) reduce spaces in selector to one.
+  selector = selector.replace(/\s+/g, ' ');
+  const findRule = s => [...s.cssRules].reverse().find(i => i.selectorText == selector)
+  let rule = sheets.map(findRule).filter(i=>i).pop()
+
+  const propsArr = props.sup
+    ? props.split(/\s*;\s*/).map(i => i.split(/\s*:\s*/)) // from string
+    : Object.entries(props);                              // from Object
+
+  if (rule) for (let [prop, val] of propsArr){
+    // rule.style[prop] = val; is against the spec, and does not support !important.
+    rule.style.setProperty(prop, ...val.split(/ *!(?=important)/));
+    }
+  else {
+    sheet = sheets.pop();
+    if (!props.sup) props = propsArr.reduce((str, [k, v]) => `${str}; ${k}: ${v}`, '');
+    sheet.insertRule(`${selector} { ${props} }`, sheet.cssRules.length);
+    }
+  }
+  
+    
+  function download(){
+    var download = document.getElementById("download");
+    var image = document.getElementById("canvasBoard").toDataURL("image/png")
+      .replace("image/png", "image/octet-stream");
+    download.setAttribute("href", image);
+    download.setAttribute("download",seed+".png");
+  }
+
+  function enterKeySeed(e) {
+      //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
+      if (e.keyCode == 13) {
+          SeedGame();
+          return false;
+      }
+  }
+
+
+  const canvas = document.getElementById("canvasBoard");
+  // load the "PyramidLove" font
+  const fontFile = new FontFace(
+    "PyramidLove",
+    "url(Pyramid-Love-3.1.woff)",
+  );
+  document.fonts.add(fontFile);
+
+  fontFile.load().then(
+    () => {
+      // font loaded successfully!
+      NewGame();
+    },
+    (err) => {
+      console.error(err);
+    },
+  );
+
+  function setDropdowns() {
+    document.getElementById("stashSelector").innerHTML="";
+    for (o=0; o<stashColors.length; o++) {
+      var tmpOpt = document.createElement("option");
+      tmpOpt.value = o;
+      tmpOpt.innerText = stashColors[o][0];
+      document.getElementById("stashSelector").appendChild(tmpOpt);
+    }
+    var tmpOpt = document.createElement("option");
+    tmpOpt.value = "custom";
+    tmpOpt.innerText = "Custom";
+    document.getElementById("stashSelector").appendChild(tmpOpt);
+
+    document.getElementById("backgroundSelector").innerHTML="";
+    
+    for (o=0; o<boardColors.length; o++) {
+      var tmpOpt = document.createElement("option");
+      tmpOpt.value = o;
+      tmpOpt.innerText = boardColors[o][2];
+      document.getElementById("backgroundSelector").appendChild(tmpOpt);
+    }
+    var tmpOpt = document.createElement("option");
+    tmpOpt.value = "custom";
+    tmpOpt.innerText = "Custom";
+    document.getElementById("backgroundSelector").appendChild(tmpOpt);
+  }
+
+  function makeDropdown() {
+    // From https://www.w3schools.com/howto/howto_custom_select.asp
+    var d=document.getElementsByClassName("select-selected").length;
+    for (r=0; r<d; r++) {
+      document.getElementsByClassName("select-selected")[0].remove();
+    }
+    var x, i, j, l, ll, selElmnt, a, b, c;
+    /* Look for any elements with the class "custom-select": */
+    x = document.getElementsByClassName("custom-select");
+    l = x.length;
+    for (i = 0; i < l; i++) {
+      selElmnt = x[i].getElementsByTagName("select")[0];
+      ll = selElmnt.length;
+      /* For each element, create a new DIV that will act as the selected item: */
+      a = document.createElement("DIV");
+      a.setAttribute("class", "select-selected");
+      a.id = selElmnt.id+"Div";
+      a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
+      x[i].appendChild(a);
+      /* For each element, create a new DIV that will contain the option list: */
+      b = document.createElement("DIV");
+      b.setAttribute("class", "select-items select-hide");
+      for (j = 1; j < ll; j++) {
+        /* For each option in the original select element,
+        create a new DIV that will act as an option item: */
+        c = document.createElement("DIV");
+        c.innerHTML = selElmnt.options[j].innerHTML;
+        c.addEventListener("click", function(e) {
+            /* When an item is clicked, update the original select box,
+            and the selected item: */
+            var y, i, k, s, h, sl, yl;
+            s = this.parentNode.parentNode.getElementsByTagName("select")[0];
+            sl = s.length;
+            h = this.parentNode.previousSibling;
+            for (i = 0; i < sl; i++) {
+              if (s.options[i].innerHTML == this.innerHTML) {
+                s.selectedIndex = i;
+                h.innerHTML = this.innerHTML;
+                y = this.parentNode.getElementsByClassName("same-as-selected");
+                yl = y.length;
+                for (k = 0; k < yl; k++) {
+                  y[k].removeAttribute("class");
+                }
+                this.setAttribute("class", "same-as-selected");
+                break;
+              }
+            }
+            h.click();
+            DropClicked(s.id);
+        });
+        b.appendChild(c);
+      }
+      x[i].appendChild(b);
+      a.addEventListener("click", function(e) {
+        /* When the select box is clicked, close any other select boxes,
+        and open/close the current select box: */
+        e.stopPropagation();
+        closeAllSelect(this);
+        this.nextSibling.classList.toggle("select-hide");
+        this.classList.toggle("select-arrow-active");
+      });
+    }
+  }
+
+  function closeAllSelect(elmnt) {
+    /* A function that will close all select boxes in the document,
+    except the current select box: */
+    var x, y, i, xl, yl, arrNo = [];
+    x = document.getElementsByClassName("select-items");
+    y = document.getElementsByClassName("select-selected");
+    xl = x.length;
+    yl = y.length;
+    for (i = 0; i < yl; i++) {
+      if (elmnt == y[i]) {
+        arrNo.push(i)
+      } else {
+        y[i].classList.remove("select-arrow-active");
+      }
+    }
+    for (i = 0; i < xl; i++) {
+      if (arrNo.indexOf(i)) {
+        x[i].classList.add("select-hide");
+      }
+    }
+  }
+
+  function invertColor(hex, bw) {
+    //From: https://stackoverflow.com/questions/35969656/how-can-i-generate-the-opposite-color-according-to-current-color
+    console.log("invertColors("+hex+", "+bw+");");
+    if (hex.indexOf('#') === 0) {
+      hex = hex.slice(1);
+    }
+    // convert 3-digit hex to 6-digits.
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (hex.length !== 6) {
+      throw new Error('Invalid HEX color.');
+    }
+    var r = parseInt(hex.slice(0, 2), 16),
+        g = parseInt(hex.slice(2, 4), 16),
+        b = parseInt(hex.slice(4, 6), 16);
+    if (bw) {
+      // https://stackoverflow.com/a/3943023/112731
+      return (r * 0.299 + g * 0.587 + b * 0.114) > 186
+        ? '#000000'
+        : '#FFFFFF';
+    }
+    // invert color components
+    r = (255 - r).toString(16);
+    g = (255 - g).toString(16);
+    b = (255 - b).toString(16);
+    // pad each with zeros and return
+    console.log("invertColors return #" + padZero(r) + padZero(g) + padZero(b));
+    return "#" + padZero(r) + padZero(g) + padZero(b);
+  }
+  function padZero(str, len) {
+    len = len || 2;
+    var zeros = new Array(len).join('0');
+    return (zeros + str).slice(-len);
+  }
+
+  function saveSettings() {
+    window.localStorage.setItem("savedStashColors", JSON.stringify(stashColors));
+    window.localStorage.setItem("savedBoardColors", JSON.stringify(boardColors));
+    tmpSettings = {"pyramidColors": pyramidColors,
+                    "fillColors": fillColors,
+                    //"styleDropShadow": styleDropShadow,
+                    //"styleShadowInverted": styleShadowInverted,
+                    //"styleOutline": styleOutline,
+                    //"styleOutlineInverted": styleOutlineInverted
+                  };
+    window.localStorage.setItem("savedSettings", JSON.stringify(tmpSettings));
+  }
+  
+  function loadSettings() {
+    var tmpStashColors=JSON.parse(window.localStorage.getItem("savedStashColors"));
+    if (tmpStashColors !== null) {
+      stashColors=tmpStashColors;
+    }
+    var tmpBoardColors=JSON.parse(window.localStorage.getItem("savedBoardColors"));
+    if (tmpBoardColors !== null) {
+      boardColors=tmpBoardColors;
+    }
+    var tmpSettings=JSON.parse(window.localStorage.getItem("savedSettings"));
+    console.log(tmpSettings);
+    if (tmpSettings !== null) {
+      pyramidColors = tmpSettings.pyramidColors;
+      fillColors = tmpSettings.fillColors;
+      //styleDropShadow = tmpSettings.styleDropShadow;
+      //styleShadowInverted = tmpSettings.styleShadowInverted;
+      //styleOutline = tmpSettings.styleOutline;
+      //styleOutlineInverted = tmpSettings.styleOutlineInverted;
+      //setStyle("shadow", false);
+      //setStyle("shadowinverted", false);
+      //setStyle("outline", false);
+      //setStyle("outlineinverted", true);
+    }
+    setDropdowns();
+    makeDropdown();
+  }
+
+    
+  
+    
+
+  loadSettings();
+  /* If the user clicks anywhere outside the select box,
+  then close all select boxes: */
+  //document.addEventListener("click", closeAllSelect); 
+  document.addEventListener("click", function (e) {
+    closeAllSelect();
+  })
+
+/*
+  var canvasA = document.getElementById("canvasAnim");
+  var ctx = canvasA.getContext("2d");
+  var stepWidthFactor = 200;
+  var mouseX, mouseY;
+  var targetX, targetY;
+    function background() {
+      //ctx.fillStyle = "#505050";
+      //ctx.fillRect(0, 0, canvasA.width, canvasA.height);
+      ctx.clearRect(0, 0, canvasA.width, canvasA.height);
+  }
+  var ball = {
+      x: 100,
+      y: 100,
+      dx: 0,
+      dy: 0,
+      draw: function () {
+        ctx.fillStyle = "#F00000";
+
+        ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
+        ctx.textBaseline = 'top';
+        ctx.fillText  ('\ue925', this.x, this.y);
+        //ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*targetX, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*targetY);
+        
+        //ctx.beginPath();
+        //ctx.arc(this.x, this.y, 30, 0, 2 * Math.PI);
+        //ctx.fill();
+        //ctx.stroke();
+      }
+  }
+
+  function draw() {
+    background();
+    ball.draw();
+
+    var shouldMove = Math.abs(ball.x - mouseX) > 1 || Math.abs(ball.y - mouseY) > 1;
+    //var shouldMove = Math.abs(ball.x - targetX) > 1 || Math.abs(ball.y - targetY) > 1;
+
+    if(shouldMove) {
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+    } else {
+      ball.dx = 0;
+      ball.dy = 0;
+    }
+
+    window.requestAnimationFrame(draw)
+  }
+
+  draw();
+    */
+</script>
+  
+  
+</body>
+</html>
