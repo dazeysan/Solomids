@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SVG Test</title>
+  
+    <script>
+    // Copyright for the random seed code:
+    /*
+    Copyright 2014 David Bau.
+
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    */
+
+    (function (pool, math) {
+    //
+    // The following constants are related to IEEE 754 limits.
+    //
+
+    // Detect the global object, even if operating in strict mode.
+    // http://stackoverflow.com/a/14387057/265298
+    var global = (0, eval)('this'),
+        width = 256,        // each RC4 output is 0 <= x < 256
+        chunks = 6,         // at least six RC4 outputs for each double
+        digits = 52,        // there are 52 significant digits in a double
+        rngname = 'random', // rngname: name for Math.random and Math.seedrandom
+        startdenom = math.pow(width, chunks),
+        significance = math.pow(2, digits),
+        overflow = significance * 2,
+        mask = width - 1,
+        nodecrypto;         // node.js crypto module, initialized at the bottom.
+
+    //
+    // seedrandom()
+    // This is the seedrandom function described above.
+    //
+    function seedrandom(seed, options, callback) {
+      var key = [];
+      options = (options == true) ? { entropy: true } : (options || {});
+
+      // Flatten the seed string or build one from local entropy if needed.
+      var shortseed = mixkey(flatten(
+        options.entropy ? [seed, tostring(pool)] :
+        (seed == null) ? autoseed() : seed, 3), key);
+
+      // Use the seed to initialize an ARC4 generator.
+      var arc4 = new ARC4(key);
+
+      // This function returns a random double in [0, 1) that contains
+      // randomness in every bit of the mantissa of the IEEE 754 value.
+      var prng = function() {
+        var n = arc4.g(chunks),             // Start with a numerator n < 2 ^ 48
+            d = startdenom,                 //   and denominator d = 2 ^ 48.
+            x = 0;                          //   and no 'extra last byte'.
+        while (n < significance) {          // Fill up all significant digits by
+          n = (n + x) * width;              //   shifting numerator and
+          d *= width;                       //   denominator and generating a
+          x = arc4.g(1);                    //   new least-significant-byte.
+        }
+        while (n >= overflow) {             // To avoid rounding up, before adding
+          n /= 2;                           //   last byte, shift everything
+          d /= 2;                           //   right using integer math until
+          x >>>= 1;                         //   we have exactly the desired bits.
+        }
+        return (n + x) / d;                 // Form the number within [0, 1).
+      };
+
+      prng.int32 = function() { return arc4.g(4) | 0; }
+      prng.quick = function() { return arc4.g(4) / 0x100000000; }
+      prng.double = prng;
+
+      // Mix the randomness into accumulated entropy.
+      mixkey(tostring(arc4.S), pool);
+
+      // Calling convention: what to return as a function of prng, seed, is_math.
+      return (options.pass || callback ||
+          function(prng, seed, is_math_call, state) {
+            if (state) {
+              // Load the arc4 state from the given state if it has an S array.
+              if (state.S) { copy(state, arc4); }
+              // Only provide the .state method if requested via options.state.
+              prng.state = function() { return copy(arc4, {}); }
+            }
+
+            // If called as a method of Math (Math.seedrandom()), mutate
+            // Math.random because that is how seedrandom.js has worked since v1.0.
+            if (is_math_call) { math[rngname] = prng; return seed; }
+
+            // Otherwise, it is a newer calling convention, so return the
+            // prng directly.
+            else return prng;
+          })(
+      prng,
+      shortseed,
+      'global' in options ? options.global : (this == math),
+      options.state);
+    }
+    math['seed' + rngname] = seedrandom;
+
+    //
+    // ARC4
+    //
+    // An ARC4 implementation.  The constructor takes a key in the form of
+    // an array of at most (width) integers that should be 0 <= x < (width).
+    //
+    // The g(count) method returns a pseudorandom integer that concatenates
+    // the next (count) outputs from ARC4.  Its return value is a number x
+    // that is in the range 0 <= x < (width ^ count).
+    //
+    function ARC4(key) {
+      var t, keylen = key.length,
+          me = this, i = 0, j = me.i = me.j = 0, s = me.S = [];
+
+      // The empty key [] is treated as [0].
+      if (!keylen) { key = [keylen++]; }
+
+      // Set up S using the standard key scheduling algorithm.
+      while (i < width) {
+        s[i] = i++;
+      }
+      for (i = 0; i < width; i++) {
+        s[i] = s[j = mask & (j + key[i % keylen] + (t = s[i]))];
+        s[j] = t;
+      }
+
+      // The "g" method returns the next (count) outputs as one number.
+      (me.g = function(count) {
+        // Using instance members instead of closure state nearly doubles speed.
+        var t, r = 0,
+            i = me.i, j = me.j, s = me.S;
+        while (count--) {
+          t = s[i = mask & (i + 1)];
+          r = r * width + s[mask & ((s[i] = s[j = mask & (j + t)]) + (s[j] = t))];
+        }
+        me.i = i; me.j = j;
+        return r;
+        // For robust unpredictability, the function call below automatically
+        // discards an initial batch of values.  This is called RC4-drop[256].
+        // See http://google.com/search?q=rsa+fluhrer+response&btnI
+      })(width);
+    }
+
+    //
+    // copy()
+    // Copies internal state of ARC4 to or from a plain object.
+    //
+    function copy(f, t) {
+      t.i = f.i;
+      t.j = f.j;
+      t.S = f.S.slice();
+      return t;
+    };
+
+    //
+    // flatten()
+    // Converts an object tree to nested arrays of strings.
+    //
+    function flatten(obj, depth) {
+      var result = [], typ = (typeof obj), prop;
+      if (depth && typ == 'object') {
+        for (prop in obj) {
+          try { result.push(flatten(obj[prop], depth - 1)); } catch (e) {}
+        }
+      }
+      return (result.length ? result : typ == 'string' ? obj : obj + '\0');
+    }
+
+    //
+    // mixkey()
+    // Mixes a string seed into a key that is an array of integers, and
+    // returns a shortened string seed that is equivalent to the result key.
+    //
+    function mixkey(seed, key) {
+      var stringseed = seed + '', smear, j = 0;
+      while (j < stringseed.length) {
+        key[mask & j] =
+          mask & ((smear ^= key[mask & j] * 19) + stringseed.charCodeAt(j++));
+      }
+      return tostring(key);
+    }
+
+    //
+    // autoseed()
+    // Returns an object for autoseeding, using window.crypto and Node crypto
+    // module if available.
+    //
+    function autoseed() {
+      try {
+        var out;
+        if (nodecrypto && (out = nodecrypto.randomBytes)) {
+          // The use of 'out' to remember randomBytes makes tight minified code.
+          out = out(width);
+        } else {
+          out = new Uint8Array(width);
+          (global.crypto || global.msCrypto).getRandomValues(out);
+        }
+        return tostring(out);
+      } catch (e) {
+        var browser = global.navigator,
+            plugins = browser && browser.plugins;
+        return [+new Date, global, plugins, global.screen, tostring(pool)];
+      }
+    }
+
+    //
+    // tostring()
+    // Converts an array of charcodes to a string
+    //
+    function tostring(a) {
+      return String.fromCharCode.apply(0, a);
+    }
+
+    //
+    // When seedrandom.js is loaded, we immediately mix a few bits
+    // from the built-in RNG into the entropy pool.  Because we do
+    // not want to interfere with deterministic PRNG state later,
+    // seedrandom will not call math.random on its own again after
+    // initialization.
+    //
+    mixkey(math.random(), pool);
+
+    //
+    // Nodejs and AMD support: export the implementation as a module using
+    // either convention.
+    //
+    if ((typeof module) == 'object' && module.exports) {
+      module.exports = seedrandom;
+      // When in node.js, try using crypto package for autoseeding.
+      try {
+        nodecrypto = require('crypto');
+      } catch (ex) {}
+    } else if ((typeof define) == 'function' && define.amd) {
+      define(function() { return seedrandom; });
+    }
+
+    // End anonymous scope, and pass initial values.
+    })(
+      [],     // pool: entropy pool starts empty
+      Math    // math: package containing random, pow, and seedrandom
+    );
+
+  </script>
+  
+  <style>
+      /* Styling for multi-color svgs */
+    .icon-two-part.style1 {
+      --color-1: #ff0000;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style2 {
+      --color-1: #00ff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style3 {
+      --color-1: #0000ff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style4 {
+      --color-1: #ffff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style5 {
+      --color-1: #00ffff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    
+    .icon-two-part.hollow-style1 {
+      --color-1: #ff0000;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style2 {
+      --color-1: #00ff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 3;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style3 {
+      --color-1: #0000ff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style4 {
+      --color-1: #ffff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style5 {
+      --color-1: #00ffff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    
+    .icon-two-part.swap-icon-available {
+      --color-1: #00ff00;
+    }
+    .icon-two-part.swap-icon-unavailable {
+      --color-1: #444444;
+    }
+    .icon-two-part.swap-icon-used {
+      --color-1: #ff0000;
+    }
+    
+    .move-slow {
+      transition: all 1.0s; 
+    }
+    
+    .swap-border-animated {
+      stroke-dasharray: 20;
+      animation: dash 1s infinite;
+      stroke: #00ff00;
+      stroke-width: 4px;
+      stroke-linecap: round;
+    }
+    @keyframes dash {
+      to {
+        stroke-dashoffset: 160;
+      }
+    }
+    
+    /* Disable double-tap */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+    
+  </style>
+</head>
+<body>
+
+  <div style="">
+    <div id="controls_div" style="margin: 10px;">
+      <button type="button" onClick="Javascript:NewGame(null, 'seed');">Seeded Game</button>
+      <input type="text" id="seedbox" onkeypress="return enterKeySeed(event)" />
+      <button type="button" onClick="Javascript:NewGame(null, 'random');">Random Game</button>
+
+    </div>
+    <div id="board_div" style="">
+      <svg id="table" xmlns="http://www.w3.org/2000/svg" width="250" height="500" viewBox="0 0 250 500">
+      <rect width="100%" height="100%" fill="#aaaaaa" />
+        <symbol id="Pawn-icon" viewBox="-5 -5 147.6 178.9">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M137.1,159.8L74.9,4.2c-1-2.5-3.4-4.2-6.2-4.2s-5.2,1.6-6.2,4.2L.5,159.8c-.8,2-.6,4.4.7,6.2,1.2,1.8,3.3,2.9,5.5,2.9h124.3c2.2,0,4.3-1.1,5.5-2.9,1.2-1.8,1.5-4.1.7-6.2h0Z"/>
+          <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M79.1,133.8c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
+        </symbol>
+        <symbol id="Drone-icon" viewBox="-5 -5 188.8 242.1">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M178.4,223.1L95.6,4.3c-1-2.6-3.4-4.3-6.2-4.3s-5.2,1.7-6.2,4.3L.4,223.1c-.8,2-.5,4.3.7,6.1,1.2,1.8,3.3,2.9,5.5,2.9h165.6c2.2,0,4.2-1.1,5.5-2.9,1.2-1.8,1.5-4.1.8-6.1h0Z"/>
+          <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M53.4,207.9c-6,0-10.9-4.9-10.9-10.9,0-.3,0-.7,0-1h0s0,0,0-.1c.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.4,0,.7,0,1,0,6-4.9,10.9-10.9,10.9ZM94,197c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0s0,0,0,0c6,0,10.9-4.9,10.9-10.9Z"/>
+        </symbol>
+        <symbol id="Queen-icon" viewBox="-5 -5 242.2 283.1">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M231.7,263.9L122.2,4.1c-1-2.5-3.4-4.1-6.1-4.1s-5.1,1.6-6.1,4.1L.5,263.9c-.9,2.1-.6,4.4.6,6.2s3.3,3,5.5,3h219c2.2,0,4.3-1.1,5.5-3s1.5-4.2.6-6.2h0Z"/>
+          <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M83.4,248.9c-6,0-10.9-4.9-10.9-10.9s0-.7,0-1c0,0,0-.1,0-.1.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.3,0,.7,0,1h0c0,6-4.9,10.9-10.9,10.9ZM42.8,238c0,6,4.9,10.9,10.9,10.9s10.9-4.9,10.9-10.9,0-.6,0-1c0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1h0c0,.4,0,.7,0,1ZM124.1,238c0-.3,0-.6,0-1,0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
+        </symbol>
+        <symbol id="Hollow-Tree-icon" viewBox="0 0 252 512">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M241.434 502.459l-47.996-113.912h15.048c2.256 0 4.373-1.101 5.653-2.959 1.294-1.858 1.572-4.233 0.769-6.336l-41.792-110.516h14.802c2.289 0 4.399-1.135 5.686-3.026 1.267-1.885 1.532-4.286 0.69-6.396l-61.995-155.201c-1.042-2.614-3.57-4.326-6.382-4.326s-5.341 1.712-6.382 4.326l-62.008 155.195c-0.849 2.116-0.584 4.519 0.69 6.396 1.281 1.891 3.404 3.026 5.686 3.026h14.815l-41.806 110.522c-0.796 2.103-0.511 4.478 0.77 6.336 1.294 1.858 3.404 2.959 5.666 2.959h15.035l-47.996 113.913c-0.889 2.116-0.663 4.538 0.611 6.462 1.274 1.93 3.424 3.078 5.732 3.078h218.371c2.315 0 4.452-1.148 5.732-3.079 1.267-1.924 1.493-4.339 0.604-6.462zM74.058 254.988l51.858-129.797 51.851 129.797h-103.709zM53.297 374.799l40.127-106.063h64.975l40.134 106.063h-145.236zM27.083 498.252l46.218-109.7h105.221l46.218 109.7h-197.657z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M74.416 475.502c-0.73-7.192-7.285-20.601-9.806-25.564-0.404-0.81-1.566-0.81-1.984 0-2.541 4.943-9.103 18.332-9.806 25.591 0 0.046-0.014 0.099-0.014 0.146-0.026 0.365-0.053 0.704-0.053 1.041 0 6.005 4.864 10.861 10.874 10.861 5.991 0 10.855-4.85 10.855-10.861 0-0.325-0.020-0.657-0.053-1.009 0-0.067-0.007-0.139-0.013-0.205z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M104.087 475.502c-0.723-7.192-7.278-20.601-9.799-25.564-0.418-0.81-1.573-0.81-1.99 0-2.541 4.943-9.109 18.332-9.799 25.591-0.013 0.046-0.013 0.099-0.013 0.146-0.046 0.365-0.059 0.704-0.059 1.041 0 6.005 4.864 10.861 10.861 10.861s10.868-4.85 10.868-10.861c0-0.325-0.020-0.657-0.053-1.009 0-0.067-0.007-0.139-0.013-0.205z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M133.757 475.502c-0.73-7.192-7.285-20.601-9.793-25.564-0.412-0.81-1.559-0.81-1.99 0-2.541 4.943-9.097 18.332-9.806 25.591 0 0.046-0.013 0.099-0.013 0.146-0.026 0.365-0.046 0.704-0.046 1.041 0 6.005 4.87 10.861 10.874 10.861 5.998 0 10.861-4.85 10.861-10.861 0-0.325-0.020-0.657-0.066-1.009 0-0.067-0.013-0.139-0.020-0.205z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M84.275 362.512c1.665 1.015 3.59 1.639 5.68 1.639 5.998 0 10.855-4.87 10.855-10.875 0-0.312-0.020-0.65-0.059-1.009 0-0.067-0.007-0.139-0.020-0.205-0.418-4.219-2.853-10.543-5.281-16.076-1.739-3.908-3.463-7.438-4.511-9.495-0.404-0.803-1.559-0.803-1.984 0-2.534 4.95-9.103 18.325-9.799 25.603-0.007 0.040-0.007 0.093-0.020 0.139-0.026 0.358-0.053 0.716-0.053 1.041 0 3.914 2.084 7.318 5.195 9.236z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M119.618 364.151c5.998 0 10.881-4.87 10.881-10.875 0-0.312-0.026-0.65-0.060-1.009 0-0.067-0.020-0.139-0.026-0.205-0.723-7.205-7.272-20.601-9.806-25.57-0.418-0.803-1.573-0.803-1.984 0-2.534 4.95-9.103 18.325-9.799 25.603-0.007 0.040-0.007 0.093-0.013 0.139-0.026 0.358-0.059 0.716-0.059 1.041 0.007 5.998 4.864 10.875 10.868 10.875z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M119.871 242.833c1.593 0.922 3.437 1.5 5.407 1.5 2.376 0 4.551-0.783 6.33-2.070 2.74-1.977 4.538-5.175 4.538-8.804 0-0.312-0.020-0.65-0.053-1.008-0.013-0.066-0.013-0.132-0.026-0.213-0.73-7.198-7.279-20.595-9.799-25.564-0.412-0.81-1.566-0.81-1.984 0-2.534 4.95-9.103 18.319-9.806 25.611-0.007 0.047-0.007 0.093-0.007 0.139-0.033 0.351-0.053 0.71-0.053 1.035 0 4.014 2.203 7.49 5.454 9.375z"></path>
+        </symbol>
+        <symbol id="Swap-icon"  viewBox="0 0 32 32">
+          <path class="swap" fill="var(--color-1)" stroke="var(--color-1)" stroke-width="var(--stroke-1)" d="M0 30.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM0.032 10.368q-0.096-0.608 0.128-1.152t0.704-0.864 1.152-0.352h1.984q0-2.464 1.76-4.224t4.256-1.76h4q0.704 0 1.216 0.416t0.64 0.992 0 1.184-0.64 0.992-1.216 0.416h-4q-0.832 0-1.44 0.576t-0.576 1.408h2.016q0.64 0 1.152 0.384t0.704 0.864 0.096 1.12-0.544 1.056l-4 4q-0.64 0.608-1.44 0.608t-1.376-0.608l-4-4q-0.48-0.448-0.576-1.056zM4 28h4v-4h-4v4zM16.128 28.608q-0.096-0.608 0-1.184t0.64-0.992 1.248-0.416h4q0.8 0 1.408-0.576t0.576-1.44h-1.984q-0.672 0-1.184-0.352t-0.704-0.896-0.096-1.12 0.576-1.024l4-4q0.608-0.608 1.408-0.608t1.408 0.576l4 4q0.48 0.48 0.576 1.088t-0.16 1.12-0.704 0.864-1.12 0.352h-2.016q0 2.496-1.76 4.256t-4.224 1.76h-4q-0.736 0-1.248-0.416t-0.64-0.992zM20 10.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM24 8h4v-4h-4v4z"></path>
+        </symbol>
+      </svg>
+    </div>
+
+  </div>
+
+
+  <script>
+    
+    
+    var boardWidth = 5;    //Number of columns
+    var boardHeight = 10;  //Number of rows
+    var cellWidth = 50;    //Pixel width of each square
+    var cellHeight = 50;   //Pixel height of each square
+    
+    var pieceToCellRatio = 0.8;  //Size of Queen pyramid vs smallest square dimension
+    var piecesRatio = [0.4, 0.6, 0.8, 1.0]; //Ratio of smallpawn, Pawn, Drone, and Queen vs Queen
+    
+    var stashColors = [ 
+      ["Select pyramid colors:"], 
+      ["Rainbow Stash", "#f00", "#d3d319", "#008000", "#00f", "#000", "#000", "#000", "#000", "#fff", "#fff", "#000", "#000", "#000", "#00f", "#fff"], 
+      ["Xeno Stash", "#0ff", "#800080", "#ffa500", "#eee", "#555"], 
+      ["Test Stash", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
+    ];  //the Xeno stash should be clear and opaque white, not greys
+    var boardColors = [
+      ["", "", "Select board colors:"],
+      ["#000000", "#ffffff", "Black & White"],
+      ["#ffffff", "#000000", "White & Black"],
+      ["#ffffff", "#bbddff", "White & Light Blue"],
+      ["#ffdab9", "#858585", "Peach & Grey"]
+    ];
+    
+    //Fill the "bag" with all of the pieces
+    //DO NOT change the order of the pieces or you will break the seed consistancy
+    var bag = [ [11], [11], [11], [12], [12], [12], [13], [13], [13], [21], [21], [21], [22], [22], [22], [23], [23], [23], [31], [31], [31], [32], [32], [32], [33], [33], [33], [41], [41], [41], [42], [42], [42], [43], [43], [43], [51], [51], [51], [52], [52], [52], [53], [53], [53] ];
+    
+    //Create a 2D array to store our board state in
+    var cells = new Array(boardWidth).fill(0).map(() => new Array(boardHeight).fill([]));
+    
+    var pyramidColors, fillColors;
+    var small = cellWidth;
+    if (cellWidth > cellHeight) {
+      small = cellHeight;
+    }
+    var pieceSizes = [0, Math.floor(small*(pieceToCellRatio*piecesRatio[1])), Math.floor(small*(pieceToCellRatio*piecesRatio[2])), Math.floor(small*(pieceToCellRatio*piecesRatio[3]))];
+    var pieceSizeNames = ["none", "Pawn-icon", "Drone-icon", "Queen-icon"];
+    var piecesWithIds = {};
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    var clickMode = "none";
+    var selectedCell = [-1, -1];
+    var swap1 = [-1, -1];
+    var swapsUsed = 0;
+
+    var moveHistory = [];
+    var moveHist = [];
+
+    var bank = [];
+    var score = 0;
+    
+    const svg = document.getElementById("table");
+    const svgns = "http://www.w3.org/2000/svg";
+    var tableau = document.createElementNS(svgns, "g");
+    tableau.id = "svg_tableau";
+    svg.appendChild(tableau);
+    var board = document.createElementNS(svgns, "g");
+    board.id = "svg_board";
+    svg.appendChild(board);
+    var bits = document.createElementNS(svgns, "g");
+    bits.id = "svg_bits";
+    svg.appendChild(bits);
+    var queens = document.createElementNS(svgns, "g");
+    queens.id = "svg_board_queens";
+    bits.appendChild(queens);
+    var drones = document.createElementNS(svgns, "g");
+    drones.id = "svg_board_drones";
+    bits.appendChild(drones);
+    var pawns = document.createElementNS(svgns, "g");
+    pawns.id = "svg_board_pawns";
+    bits.appendChild(pawns);
+    var clickLayer = document.createElementNS(svgns, "g");
+    clickLayer.id = "svg_clickLayer";
+    svg.appendChild(clickLayer);
+    
+    var clickRect = document.createElementNS(svgns, "rect");
+    clickRect.setAttribute("x", 0);
+    clickRect.setAttribute("y", 0);
+    clickRect.setAttribute("width", boardWidth*cellWidth);
+    clickRect.setAttribute("height", boardHeight*cellHeight);
+    clickRect.setAttribute("fill-opacity", 0.0);
+    clickRect.style.cursor = "pointer";
+    clickRect.addEventListener('click', function(event) {
+      BoardClicked(event);
+    }, false);
+    clickLayer.appendChild(clickRect);
+  
+    function BoardClicked(event, type=0){
+      console.log("Board Clicked: "); console.log(event);
+      var x = event.clientX - clickLayer.getBoundingClientRect().left;
+      var y = event.clientY - clickLayer.getBoundingClientRect().top;
+      var col = Math.ceil(x/cellWidth)-1;
+      var row = Math.ceil(y/cellHeight)-1;
+      if(col == -1){ col = 0; }
+      if(row == -1){ row = 0; }
+      if(col == boardWidth){ col = boardWidth-1; }
+      if(row == boardHeight){ row = boardHeight-1; }
+      console.log(`Calc Click: ${x}, ${y} | col ${col}, row ${row}`);
+      console.log(cells[col][row]);
+      if (clickMode == "none") {
+        console.log("clickMode: none");
+        if (cells[col][row].length > 0) {
+          selectedCell = [col, row];
+          clickMode = "move";
+          SetCellHighlight(col, row);
+          if (cells[col][row].length == 3) {
+            //A full tree is selected.
+            FullTreeSelected(col, row, type);
+          }
+        }
+      } else if (clickMode == "move") {
+        if (selectedCell[0] == col && selectedCell[1] == row) {
+          ClearCellHighlights();
+          selectedCell = [-1, -1];
+          clickMode = "none";
+        } else {
+          MovePyramid(col, row);
+        }
+      } else if (clickMode == "swap") {
+        if (cells[col][row].length > 0) {
+          if (swap1[0] == -1) {
+            //Set the first cell in the swap
+            swap1 = [col, row];
+            SetCellHighlight(col, row);
+          } else if (swap1[0] == col && swap1[1] == row) {
+            //Clicked the same cell twice, clear the highlight
+            ClearCellHighlights();
+            swap1 = [-1, -1];
+          } else {
+            //Must have clicked a 2nd cell, swap them
+            var tmpSwap = cells[col][row];
+            var tmpPos2 = [swap1[0], swap1[1]];
+            moveHistory.push(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]]);
+            moveHist.push(["w", [col,row], tmpPos2]);
+            cells[col][row] = cells[swap1[0]][swap1[1]];
+            for (var o=0; o<cells[col][row].length; o++) {
+              cells[col][row][o].col = col;
+              cells[col][row][o].row = row;
+            }
+            cells[swap1[0]][swap1[1]] = tmpSwap;
+            for (var n=0; n<cells[swap1[0]][swap1[1]].length; n++) {
+              cells[swap1[0]][swap1[1]][n].col = swap1[0];
+              cells[swap1[0]][swap1[1]][n].row = swap1[1];
+            }
+            document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
+            document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
+            swapsUsed++;
+            ClearCellHighlights();
+            swap1 = [-1, -1];
+            UpdatePiecesOnBoard();
+            UpdateBank();
+            clickMode = "none";
+          }
+        }
+      }
+    }
+    
+    function FullTreeSelected(col, row, type) {
+      console.log("FullTreeSelected("+col+", "+row+", "+type+")");
+      if (type == 2 && selectedCell[0] != -1) {
+        //Tree was double-clicked
+        console.log("Bank that tree!");
+        var tmpPos = (row * boardWidth)+col;
+        for (var p=0; p<cells[col][row].length; p++) {
+          cells[col][row][p].bank = true;
+        }
+        bank.push(cells[col][row]);
+        moveHistory.push(["bank", [col,row], cells[col][row]]);
+        moveHist.push(["b", tmpPos, Number(cells[col][row][0].toString()[0])]);
+        cells[col][row] = [];
+        UpdateBank();
+        UpdatePiecesOnBoard();
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        clickMode = "none";
+      }
+    }
+    
+    function DrawTable() {
+      var tmpWidth = (boardWidth * cellWidth)*2;
+      var tmpHeight = boardHeight * cellHeight;
+      svg.setAttribute("width", tmpWidth);
+      svg.setAttribute("height", tmpHeight);
+      svg.setAttribute("viewBox", "0 0 "+tmpWidth+" "+tmpHeight);
+      //svg.innerHTML = "";
+      var fill;
+      
+      //Draw the Tableau
+      var tRect = document.createElementNS(svgns, "rect");
+      fill = "#bbb";
+      tRect.setAttribute("x", 0);
+      tRect.setAttribute("y", 0);
+      tRect.setAttribute("width", tmpWidth);
+      tRect.setAttribute("height", tmpHeight);
+      tRect.setAttribute("fill", fill);
+      tableau.appendChild(tRect);
+      
+      //Draw the Score
+      var sText = document.createElementNS(svgns, "text");
+      sText.id = "score-text";
+      sText.setAttribute("x", 270);
+      sText.setAttribute("y", 10);
+      sText.setAttribute("fill", "#000");
+      sText.setAttribute("font", "Arial");
+      sText.setAttribute("dominant-baseline", "hanging");
+      sText.innerHTML = "Score: 0";
+      tableau.appendChild(sText);
+      
+      //Draw the Hollow Bank Trees
+      //var tmpSize = pieceSizes[3];
+      var tmpSize = cellHeight;
+      for (c=0; c<5; c++) {
+        for (r=0; r<3; r++) {
+          addShape2(tableau, "Hollow-Tree-icon", "testTree", (260+(c*tmpSize*.5)), (tmpSize*r)+30, tmpSize, tmpSize, "hollow-style"+(c+1));
+        }
+      }
+      
+      //Draw the Swap buttons
+      var s1Rect = document.createElementNS(svgns, "rect");
+      s1Rect.id = "SwapButton1Background";
+      s1Rect.setAttribute("x", 410);
+      s1Rect.setAttribute("y", 40);
+      s1Rect.setAttribute("width", 40);
+      s1Rect.setAttribute("height", 40);
+      s1Rect.setAttribute("rx", 5);
+      s1Rect.setAttribute("fill", "#fff");
+      s1Rect.setAttribute("stroke", "#000");
+      tableau.appendChild(s1Rect);
+      addShape2(tableau, "Swap-icon", "SwapButton1", 415, 45, 30, 30, "swap-icon-unavailable");
+      var s1cRect = document.createElementNS(svgns, "rect");
+      s1cRect.id = "SwapButton1Click";
+      s1cRect.setAttribute("x", 410);
+      s1cRect.setAttribute("y", 40);
+      s1cRect.setAttribute("width", 40);
+      s1cRect.setAttribute("height", 40);
+      s1cRect.setAttribute("fill-opacity", 0.0);
+      s1cRect.style.cursor = "pointer";
+      s1cRect.style.display = "none";
+      s1cRect.addEventListener('click', function(event) {
+        console.log("Swap 1 Button Clicked");
+        StartSwap(1);
+      }, false);
+      tableau.appendChild(s1cRect);
+      
+      var s1Rect = document.createElementNS(svgns, "rect");
+      s1Rect.id = "SwapButton2Background";
+      s1Rect.setAttribute("x", 410);
+      s1Rect.setAttribute("y", 90);
+      s1Rect.setAttribute("width", 40);
+      s1Rect.setAttribute("height", 40);
+      s1Rect.setAttribute("rx", 5);
+      s1Rect.setAttribute("fill", "#fff");
+      s1Rect.setAttribute("stroke", "#000");
+      tableau.appendChild(s1Rect);
+      addShape2(tableau, "Swap-icon", "SwapButton2", 415, 95, 30, 30, "swap-icon-unavailable");
+      var s1cRect = document.createElementNS(svgns, "rect");
+      s1cRect.id = "SwapButton2Click";
+      s1cRect.setAttribute("x", 410);
+      s1cRect.setAttribute("y", 90);
+      s1cRect.setAttribute("width", 40);
+      s1cRect.setAttribute("height", 40);
+      s1cRect.setAttribute("fill-opacity", 0.0);
+      s1cRect.style.cursor = "pointer";
+      s1cRect.style.display = "none";
+      s1cRect.addEventListener('click', function(event) {
+        console.log("Swap 2 Button Clicked");
+        StartSwap(2);
+      }, false);
+      tableau.appendChild(s1cRect);
+      
+      //Draw the Bank button
+      var bRect = document.createElementNS(svgns, "rect");
+      bRect.setAttribute("x", 270);
+      bRect.setAttribute("y", 200);
+      bRect.setAttribute("width", 75);
+      bRect.setAttribute("height", 35);
+      bRect.setAttribute("rx", 5);
+      bRect.setAttribute("fill", "#fff");
+      bRect.setAttribute("stroke", "#000");
+      tableau.appendChild(bRect);
+      var bText = document.createElementNS(svgns, "text");
+      bText.setAttribute("x", 275);
+      bText.setAttribute("y", 210);
+      bText.setAttribute("fill", "#000");
+      bText.setAttribute("font", "Arial");
+      bText.setAttribute("dominant-baseline", "hanging");
+      bText.innerHTML = "\u2934 Bank";
+      tableau.appendChild(bText);
+      var cRect = document.createElementNS(svgns, "rect");
+      cRect.setAttribute("x", 270);
+      cRect.setAttribute("y", 200);
+      cRect.setAttribute("width", 75);
+      cRect.setAttribute("height", 35);
+      cRect.setAttribute("fill-opacity", 0.0);
+      cRect.style.cursor = "pointer";
+      cRect.addEventListener('click', function(event) {
+        console.log("Bank Button Clicked");
+        FullTreeSelected(selectedCell[0], selectedCell[1], 2);
+      }, false);
+      tableau.appendChild(cRect);
+      
+      //Draw the Undo button
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 370);
+      bRect2.setAttribute("y", 200);
+      bRect2.setAttribute("width", 75);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("rx", 5);
+      bRect2.setAttribute("fill", "#fff");
+      bRect2.setAttribute("stroke", "#000");
+      tableau.appendChild(bRect2);
+      var bText2 = document.createElementNS(svgns, "text");
+      bText2.setAttribute("x", 375);
+      bText2.setAttribute("y", 210);
+      bText2.setAttribute("fill", "#000");
+      bText2.setAttribute("font", "Arial");
+      bText2.setAttribute("dominant-baseline", "hanging");
+      bText2.innerHTML = "↶ Undo";
+      tableau.appendChild(bText2);
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 370);
+      bRect2.setAttribute("y", 200);
+      bRect2.setAttribute("width", 75);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("fill-opacity", 0.0);
+      bRect2.style.cursor = "pointer";
+      bRect2.addEventListener('click', function(event) {
+        console.log("Undo Button Clicked");
+        UndoLast();
+      }, false);
+      tableau.appendChild(bRect2);
+      
+      
+      //Draw the Board Squares
+      for (row=0; row<boardHeight; row++) {
+        for (col=0; col<boardWidth; col++) {
+          if ((col+row)%2) {
+            fill = fillColors[1];
+          } else {
+            fill = fillColors[0];
+          }
+          var newRect = document.createElementNS(svgns, "rect");
+          newRect.setAttribute("x", col*cellWidth);
+          newRect.setAttribute("y", row*cellHeight);
+          newRect.setAttribute("width", cellWidth);
+          newRect.setAttribute("height", cellHeight);
+          newRect.setAttribute("fill", fill);
+          board.appendChild(newRect);
+        }
+      }
+    }
+    
+    
+
+    //https://stackoverflow.com/questions/6620393/is-it-possible-to-alter-a-css-stylesheet-using-javascript-not-the-style-of-an
+    function adjustCSSRules(selector, props, sheets){
+      // get stylesheet(s)
+      if (!sheets) sheets = [...document.styleSheets];
+      else if (sheets.sup){    // sheets is a string
+        let absoluteURL = new URL(sheets, document.baseURI).href;
+        sheets = [...document.styleSheets].filter(i => i.href == absoluteURL);
+        }
+      else sheets = [sheets];  // sheets is a stylesheet
+
+      // CSS (& HTML) reduce spaces in selector to one.
+      selector = selector.replace(/\s+/g, ' ');
+      const findRule = s => [...s.cssRules].reverse().find(i => i.selectorText == selector)
+      let rule = sheets.map(findRule).filter(i=>i).pop()
+
+      const propsArr = props.sup
+        ? props.split(/\s*;\s*/).map(i => i.split(/\s*:\s*/)) // from string
+        : Object.entries(props);                              // from Object
+
+      if (rule) for (let [prop, val] of propsArr){
+        // rule.style[prop] = val; is against the spec, and does not support !important.
+        rule.style.setProperty(prop, ...val.split(/ *!(?=important)/));
+      }
+      else {
+        sheet = sheets.pop();
+        if (!props.sup) props = propsArr.reduce((str, [k, v]) => `${str}; ${k}: ${v}`, '');
+        sheet.insertRule(`${selector} { ${props} }`, sheet.cssRules.length);
+      }
+    }
+  
+    
+//    function addShape(parent, shape, x, y) {
+//      var tmpSymbol = document.createElementNS(svgns, "g");
+//      tmpSymbol.id="Pawn-icon3";
+//      tmpSymbol.setAttribute("viewBox", shape.viewBox);
+//      tmpSymbol.setAttribute("x", "150");
+//      tmpSymbol.setAttribute("y", "150");
+//      //tmpSymbol.setAttribute("width", "50");
+//      //tmpSymbol.setAttribute("height", "50");
+//      var tmpPath = document.createElementNS(svgns, "path");
+//      tmpPath.setAttributeNS(null, "d", shape.d[0]);
+//      tmpPath.setAttribute("fill", "#5cceee");
+//      tmpSymbol.appendChild(tmpPath);
+//      parent.appendChild(tmpSymbol);
+//    }
+        
+    function addShape2(parent, shape, id, x, y, width, height, style) {
+      console.log("addShape2("+parent);
+      var tmpPath = document.createElementNS(svgns, "use");
+      tmpPath.id = id;
+      tmpPath.setAttribute("href", "#"+shape);
+      tmpPath.setAttribute("width", width);
+      tmpPath.setAttribute("height", height);
+      tmpPath.setAttribute("x", x);
+      tmpPath.setAttribute("y", y);
+      tmpPath.setAttribute("fill", "#5cceee");
+      tmpPath.classList.add("icon-two-part");
+      tmpPath.classList.add(style);
+      tmpPath.classList.add("move-slow");
+      parent.appendChild(tmpPath);
+    }
+    
+    //addShape(svg, shape_pyramid_pawn, 10, 10);
+    
+    //addShape2(svg, "Pawn-icon", "testPawn", 10, 10, 30, 30, "style1");
+    //addShape2(svg, "Queen-icon", "testQueen", 50, 50, 50, 50, "style2");
+
+    
+    
+    function ShuffleBag() {
+      var t0 = performance.now();
+      console.log("ShuffleBag()");
+      //document.getElementById("status").innerHTML="";
+      var newBag=[];
+      var p=45;
+      var usedPieces = [-1, 0, 0, 0];
+      var tmpSizeErrors = 0;
+      var tmpSizeRowErrors = 0;
+      var tmpMatchErrors = 0;
+      var tmpSizeDistErrors = 0;
+      var tmpAttempts = 0;
+      var keepTrying = true;
+      var tmpRow = [];
+      var tmpRow2 = [];
+
+      do {
+        for (row=0; row<9; row++) {
+          tmpRow = [-1, 0, 0, 0];
+          for (col=0; col<5; col++) {
+            keepTrying=true;
+            do {
+              tmpRand=Math.floor(Math.random()*p);
+              //console.log(tmpRand);
+              tmpSize=Number(bag[tmpRand][0].toString()[1]);
+              tmpError=false;
+              if (usedPieces[tmpSize] - row >= 7) {
+                // Make sure there is at least 1 piece left of this size for each of the rows bellow.
+                tmpSizeErrors++;
+                //console.log("Size Error "+tmpSizeErrors);
+                tmpError=true;
+              }
+              if (tmpRow[tmpSize]>=3) {
+                // Make sure there are at most 2 of a given size in each row.
+                tmpSizeRowErrors++;
+                //console.log("Size in row Error "+tmpSizeRowErrors+"--"+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                tmpError=true;
+              }
+              if (bag[tmpRand][0] == newBag[newBag.length-1] && col != 0) {
+                // Make sure no piece matches its neighbor to the left
+                tmpMatchErrors++;
+                //console.log("New piece matches previous in same row "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                tmpError=true;
+              }
+              tmpRow2=[...tmpRow];
+              tmpRow2[tmpSize]++;
+              if (col == 4 && tmpRow2.includes(0)) {
+                // Make sure there is at least 1 of each size in the row.
+                tmpSizeDistErrors++;
+                //console.log("Missing a certain size in this row. "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                tmpError=true;
+              }
+
+              if (!tmpError) {
+                //console.log("Good Pull "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                usedPieces[tmpSize]++;
+                newBag.push(bag.splice((tmpRand), 1)[0]);
+                tmpRow[tmpSize]++;
+                //console.log(bag.length+"|"+newBag.length);
+                keepTrying=false;
+              }
+
+              //console.log(usedPieces+","+p+","+row+","+col+" || "+tmpRow);
+              tmpAttempts++;
+              if (tmpSizeErrors >= 100 || tmpSizeRowErrors >= 100 || tmpMatchErrors >= 100 || tmpAttempts >= 200) {
+                console.log("Too many Errors, breaking");
+                //document.getElementById("status").innerHTML="Can't randomize board with this seed.";
+                return(false);
+              }
+            } while (keepTrying);
+
+            p--;
+          }
+        }
+      } while (p>0);
+      bag=newBag;
+      pieces = [[], [], [], [], []];
+      for (b=0; b<bag.length; b++) {
+        pieces[b+5]=[bag[b]];
+      }
+      
+      var tmpBag = JSON.parse(JSON.stringify(bag));;
+      for (var key in piecesWithIds) {
+        if (piecesWithIds.hasOwnProperty(key)) {
+          var tmpPiece = ""+piecesWithIds[key].color+piecesWithIds[key].size;
+          for (p=0; p<tmpBag.length; p++) {
+            if (tmpBag[p][0] == tmpPiece) {
+              piecesWithIds[key].col = p%boardWidth;
+              piecesWithIds[key].row = Math.floor(p/boardWidth)+1;
+              piecesWithIds[key].elev = 0;
+              tmpBag[p][0] = null;
+              cells[piecesWithIds[key].col][piecesWithIds[key].row] = [piecesWithIds[key]];
+              break;
+            }
+          }
+        }
+      }
+      for (var c=0; c<5; c++) {
+        cells[c][0] = [];
+      }
+      bank = [];
+      for (var key in piecesWithIds) {
+        if (piecesWithIds.hasOwnProperty(key)) {
+          piecesWithIds[key].bank = false;
+          tmpElem = document.getElementById(piecesWithIds[key].id);
+          tmpElem.setAttribute("width", pieceSizes[piecesWithIds[key].size]);
+          tmpElem.setAttribute("height", pieceSizes[piecesWithIds[key].size]);
+        }
+      }
+      
+      console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors+", "+tmpSizeDistErrors+", "+tmpAttempts);
+      var t1 = performance.now();
+      console.log(`ShuffleBag() took ${t1 - t0} milliseconds.`);
+      return(true);
+    }
+    
+    function SetPyramidColors(pallete) {
+      pyramidColors=[...stashColors[pallete]];
+      console.log("SetPyramidColors("+pallete+") - "+stashColors[pallete]);
+      for (r=1; r<=5; r++) {
+        adjustCSSRules('.icon-two-part.style'+r, '--color-1: '+pyramidColors[r]);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-1: '+pyramidColors[r]);
+        var tmpPipColor = "#000000";
+        if (pyramidColors[r+5] !== undefined) {
+          tmpPipColor = pyramidColors[r+5];
+        }
+        adjustCSSRules('.icon-two-part.style'+r, '--color-2: '+tmpPipColor);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-2: '+tmpPipColor);
+        var tmpPyramidStroke = "#000000";
+        if (pyramidColors[r+10] !== undefined) {
+          tmpPyramidStroke = pyramidColors[r+10];
+        }
+        adjustCSSRules('.icon-two-part.style'+r, '--color-3: '+tmpPyramidStroke);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-3: '+tmpPyramidStroke);
+        var tmpPipStroke = "#000000";
+        if (pyramidColors[r+15] !== undefined) {
+          tmpPipStroke = pyramidColors[r+15];
+        }
+        adjustCSSRules('.icon-two-part.style'+r, '--color-4: '+tmpPipStroke);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-4: '+tmpPipStroke);
+      }
+    }
+    
+    function SetBoardColors(pallete) {
+      fillColors=[...boardColors[pallete]];
+      console.log("SetBoardColors("+pallete+") - "+fillColors[2]);
+    }
+    
+    function AddCellHighlight(col, row) {
+      console.log("AddCellHighlight()");
+      var hRect = document.createElementNS(svgns, "rect");
+      hRect.id = "cellHighlight";
+      hRect.setAttribute("x", (col*cellWidth)+cellWidth*0.05);
+      hRect.setAttribute("y", (row*cellHeight)+cellHeight*0.05);
+      hRect.setAttribute("width", cellWidth*0.9);
+      hRect.setAttribute("height", cellHeight*0.9);
+      hRect.setAttribute("fill", "#fff");
+      hRect.setAttribute("fill-opacity", 0.0);
+      hRect.setAttribute("stroke", "pink");
+      hRect.setAttribute("stroke-width", cellWidth*0.1);
+      board.appendChild(hRect);
+      
+    }
+
+    function SetCellHighlight(col, row) {
+      ClearCellHighlights();
+      AddCellHighlight(col, row);
+    }
+
+    function ClearCellHighlights() {
+      var tmp = document.getElementById("cellHighlight");
+      if (tmp !== null) {
+        tmp.remove();
+      }
+    }
+    
+    function MovePyramid(targetCol, targetRow) {
+      var targetPos = (targetRow * boardWidth)+targetCol;
+      var oldCol = selectedCell[0];
+      var oldRow = selectedCell[1];
+      var oldPos = (oldRow * boardWidth)+oldCol;
+      var oldCell = cells[oldCol][oldRow];
+      var tarCell = cells[targetCol][targetRow];
+      console.log("MovePyramid: from: "+oldPos+" to: "+targetPos);
+
+      var colorsOK = false;
+      var sizesOK = false;
+      var topMove = false;
+      var topMoveElev = -1;
+      var orthogOK = false;
+      var pathOK = false;
+      var slide = false;
+
+      if (tarCell.length == 0) {
+        //Target cell is empty, are we sliding?
+        console.log("Target cell empty, slide?");
+        if ((oldCol == targetCol) && (oldRow > targetRow)) {
+          console.log("Columns match & target is above.");
+          if (oldRow == targetRow+1) {
+            //Target is directly above
+            console.log("Slide target immediately above.");
+            slide = true;
+          } else {
+            console.log("Slide target in same column but not adjacent");
+            var checkPath = true;
+            //Cells are 2 or more row apart with the target above
+            for (r=targetRow+1; r<oldRow; r++) {
+              if (cells[targetCol][r].length != 0) {
+                checkPath = false;
+                break;
+              }
+            }
+            slide = checkPath;
+          }
+          console.log("Slide?: "+slide);
+        }
+        if (slide) {
+          console.log("We're Sliding!");
+          var slideTarget = -1;
+          for (var r=targetRow; r>=0; r--) {
+            if (cells[targetCol][r].length == 0) {
+              slideTarget = r;
+            } else {
+              break;
+            }
+          }
+          console.log("SlideTarget: "+slideTarget);
+          slideDistance = oldRow-slideTarget;
+          console.log("Distance: "+slideDistance);
+          tmpHist = [];
+          for (var r=oldRow; r<boardHeight; r++) {
+            tmpPos = (r * boardWidth)+targetCol;
+            if (cells[targetCol][r].length > 0) {
+              tmpHist.push([[targetCol,r], cells[targetCol][r], [targetCol,r-slideDistance]]);
+              cells[targetCol][r-slideDistance] = cells[targetCol][r];
+              for (var n=0; n<cells[targetCol][r-slideDistance].length; n++) {
+                cells[targetCol][r-slideDistance][n].row = r-slideDistance;
+              }
+              cells[targetCol][r] = [];
+            } else {
+              break;
+            }
+          }
+          moveHistory.push(["slide", tmpHist]);
+          moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
+          UpdatePiecesOnBoard();
+          ClearCellHighlights();
+          selectedCell = [-1, -1];
+          clickMode = "none";
+        }
+      } else {
+        //There is something in the target cell, let's check if we can stack on it
+        if (oldCell[0].color == tarCell[0].color) {
+          //The colors of the old and target pieces match
+          console.log("Colors Match");
+          colorsOK = true;
+        }
+        if (oldCell[0].size+1 == tarCell[tarCell.length-1].size) {
+          //The size of the old piece is 1 smaller than the top target piece
+          console.log("Old piece is 1 smaller than target piece");
+          sizesOK = true;
+        } else {
+          if (oldCell.length > 1) {
+            //The old tower has several pieces, check if we can move 1 or 2 of them instead of whole stack.
+            console.log("Old stack has more than 1 piece");
+            for (p=1; p<oldCell.length; p++) {
+              console.log(p);
+              if (oldCell[p].size+1 == tarCell[tarCell.length-1].size) {
+                console.log("We can do a topMove");
+                topMove = true;
+                topMoveElev = p;
+              }
+            }
+          }
+        }
+        if ((oldCol == targetCol) || (oldRow == targetRow)) {
+          //The old and target cells share a column or row
+          orthogOK = true;
+
+          if (oldCol == targetCol) {
+            if ((oldRow == targetRow+1) || (oldRow == targetRow-1)) {
+              //Cells are directly above/below each other
+              pathOK = true;
+            } else {
+              console.log("Cells in same column but not adjacent");
+              var checkPath = true;
+              if (targetRow > oldRow) {
+                //Cells are 2 or more rows apart with the target bellow
+                console.log("Target cell bellow");
+                for (r=oldRow+1; r<targetRow; r++) {
+                  //console.log(r);
+                  if (cells[targetCol][r].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              } else {
+                //Cells are 2 or more rows apart with the target above
+                console.log("Target cell above");
+                for (r=targetRow+1; r<oldRow; r++) {
+                  if (cells[targetCol][r].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              }
+              pathOK = checkPath;
+            }
+          }
+          if (oldRow == targetRow) {
+            if ((oldCol == targetCol+1) || (oldCol == targetCol-1)) {
+              //Cells are side by side
+              pathOK = true;
+            } else {
+              console.log("Cells on same row but not adjacent");
+              var checkPath = true;
+              if (targetCol > oldCol) {
+                //Cells are 2 or more columns apart with the target on the right
+                console.log("Target cell on right");
+                for (c=oldCol+1; c<targetCol; c++) {
+                  //console.log(c);
+                  if (cells[c][oldRow].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              } else {
+                //Cells are 2 or more columns apart with the target on the left
+                console.log("Target cell on left");
+                for (c=targetCol+1; c<oldCol; c++) {
+                  if (cells[c][oldRow].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              }
+              pathOK = checkPath;
+            }
+          }
+        }
+
+        if (colorsOK && orthogOK && pathOK && (sizesOK || topMove)) {
+          if (sizesOK && !topMove) {
+            console.log("Move that Piece(s)!");
+            moveHistory.push(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]]);
+            moveHist.push(["m", oldPos, targetPos]);
+            for (o=0; o<oldCell.length; o++) {
+              cells[oldCol][oldRow][o].col = tarCell[0].col;
+              cells[oldCol][oldRow][o].row = tarCell[0].row;
+            }
+            cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(cells[oldCol][oldRow]);
+            for (var e=0; e<cells[targetCol][targetRow].length; e++) {
+              cells[targetCol][targetRow][e].elev=e;
+            }
+            cells[oldCol][oldRow] = [];
+          } else if (!sizesOK && topMove) {
+            console.log("Move that TOP Piece(s)!");
+            tmpStack = cells[oldCol][oldRow].slice(topMoveElev);
+            console.log(tmpStack);
+            moveHistory.push(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]]);
+            moveHist.push(["t", oldPos, targetPos]);
+            for (t=0; t<tmpStack.length; t++) {
+              tmpStack[t].col = tarCell[0].col;
+              tmpStack[t].row = tarCell[0].row;
+            }
+            cells[oldCol][oldRow] = cells[oldCol][oldRow].splice(0,topMoveElev);
+            cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(tmpStack);                       
+            for (var e=0; e<cells[targetCol][targetRow].length; e++) {
+              cells[targetCol][targetRow][e].elev=e;
+            }
+          }
+          //DisplayPieces();
+          UpdatePiecesOnBoard();
+          ClearCellHighlights();
+          selectedCell = [-1, -1];
+          clickMode = "none";
+        } else {
+          console.log("Colors: "+colorsOK+", Sizes: "+sizesOK+", Orthogonal: "+orthogOK+"/ Path: "+pathOK);
+
+          selectedCell = [targetCol, targetRow];
+          clickMode = "move";
+          SetCellHighlight(targetCol, targetRow);
+        }
+      }
+    }
+    
+    function InitialPiecesOnBoard() {
+      var t0 = performance.now();
+      var tmpParents = [null, pawns, drones, queens];
+      for (p=0; p<bag.length; p++) {
+        if (bag[p].length > 0) {
+          var tmpShape = pieceSizeNames[bag[p].toString()[1]];
+          var tmpId = "piece_"+p;
+          var tmpCol = p%boardWidth;
+          var tmpX = (tmpCol*cellWidth)+((cellWidth-pieceSizes[bag[p].toString()[1]])/2);
+          var tmpRow = Math.floor(p/boardWidth)+1;
+          var tmpY = (tmpRow*cellHeight)+((cellHeight-pieceSizes[bag[p].toString()[1]])/2);
+          var tmpSize = pieceSizes[bag[p].toString()[1]];
+          var tmpStyle = "style"+bag[p].toString()[0];
+          var tmpParent = tmpParents[bag[p].toString()[1]];
+          addShape2(tmpParent, tmpShape, tmpId, tmpX, tmpY, tmpSize, tmpSize, tmpStyle);
+          piecesWithIds[tmpId] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
+        }
+      }
+      var t1 = performance.now();
+      console.log(`InitialPiecesOnBoard() took ${t1 - t0} milliseconds.`);
+    }
+    
+    function UpdatePiecesOnBoard() {
+      var t0 = performance.now();
+      for (var key in piecesWithIds) {
+        if (piecesWithIds.hasOwnProperty(key)) {
+          if (!piecesWithIds[key].bank) {
+            var tmpX = (piecesWithIds[key].col*cellWidth)+((cellWidth-pieceSizes[piecesWithIds[key].size])/2);
+            var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10;
+            var tmpPiece = document.getElementById(key);
+            tmpPiece.setAttribute("x", tmpX);
+            tmpPiece.setAttribute("y", tmpY);
+            //console.log(key+" "+piecesWithIds[key].col+" "+piecesWithIds[key].row+" "+piecesWithIds[key].size);
+            //console.log(tmpX+" "+tmpY);
+          }
+        }
+      }
+      var t1 = performance.now();
+      console.log(`UpdatePiecesOnBoard() took ${t1 - t0} milliseconds.`);
+    }
+  
+    function UpdateBank() {
+      if (bank.length < 15) {
+        score = bank.length;
+      } else {
+        score = bank.length + 2 - swapsUsed;
+      }
+      document.getElementById("score-text").innerHTML="Score: "+score;
+      var tmpGrid = [null, 0, 0, 0, 0, 0];
+      var tmpSwap1 = false;
+      var tmpSwap2 = false;
+      var tmpHtml = "Score: "+score+"<br/>";
+      for (b=0; b<bank.length; b++) {
+        var tmpColorNum = bank[b][0].color;
+        tmpGrid[tmpColorNum]++;
+        
+        var bOffsetX = [null, 5, 2, 0];
+        var bOffsetY = [null, -14, -8, 0];
+        var bX = 270;
+        var bY = 50;
+        var bSize = [null, 20, 26, 30];
+        for (var p=0; p<bank[b].length; p++) {
+          tmpPiece = document.getElementById(bank[b][p].id);
+          tmpX = bX+((bank[b][p].color-1)*25)+bOffsetX[bank[b][p].size];
+          tmpY = bY+((tmpGrid[bank[b][p].color]-1)*50)+bOffsetY[bank[b][p].size];
+          tmpPiece.setAttribute("x", tmpX);
+          tmpPiece.setAttribute("y", tmpY);
+          tmpPiece.setAttribute("width", bSize[bank[b][p].size]);
+          tmpPiece.setAttribute("height", bSize[bank[b][p].size]);
+          //queens w&h: 30
+          //Color1 Queen: x:270 y:50  Add y50 for 2nd and 3rd rows
+          //Color5 Queen: x:370 y:50
+          //Drone w&h: 26
+          //Color5 Drone: x:372 y:42
+          //Pawn w&h: 20
+          //Color5 Pawn: x:375 y:36
+        }
+           
+      }
+      if (tmpGrid[1] >= 1 && tmpGrid[2] >= 1 && tmpGrid[3] >= 1 && tmpGrid[4] >= 1 && tmpGrid[5] >= 1) {
+        tmpSwap1 = true;
+      }
+      if (tmpGrid[1] >= 2 && tmpGrid[2] >= 2 && tmpGrid[3] >= 2 && tmpGrid[4] >= 2 && tmpGrid[5] >= 2) {
+        tmpSwap2 = true;
+      }
+      for (var s=1; s<=3; s++) {
+        //for (var c=1; c<=5; c++) {
+        //  var tmpColor = pyramidColors[c];
+        //  if (tmpGrid[c] >= s) {
+        //    tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue9a0</span>";
+        //  } else {
+        //    tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue95f</span>";
+        //  }
+        //}
+        var s1 = document.getElementById("SwapButton1");
+        var s2 = document.getElementById("SwapButton2");
+        var s1c = document.getElementById("SwapButton1Click");
+        var s2c = document.getElementById("SwapButton2Click");
+        if (s == 1) {
+          if (tmpSwap1 && swapsUsed < 1) {
+            //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+            //tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
+            s1.classList.add("swap-icon-available");
+            s1.classList.remove("swap-icon-unavailable");
+            s1.classList.remove("swap-icon-used");
+            s1c.style.display="block";
+          } else if (tmpSwap1 && swapsUsed >= 1) {
+            //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
+            s1.classList.remove("swap-icon-available");
+            s1.classList.remove("swap-icon-unavailable");
+            s1.classList.add("swap-icon-used");
+            s1c.style.display="none";
+          } else {
+            //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
+            s1.classList.remove("swap-icon-available");
+            s1.classList.add("swap-icon-unavailable");
+            s1.classList.remove("swap-icon-used");
+            s1c.style.display="none";
+          }
+        } else if (s == 2) {
+          if (tmpSwap2 && swapsUsed < 2) {
+            //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+            //tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
+            s2.classList.add("swap-icon-available");
+            s2.classList.remove("swap-icon-unavailable");
+            s2.classList.remove("swap-icon-used");
+            s2c.style.display="block";
+          } else if (tmpSwap2 && swapsUsed >= 2) {
+            //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
+            s2.classList.remove("swap-icon-available");
+            s2.classList.remove("swap-icon-unavailable");
+            s2.classList.add("swap-icon-used");
+            s2c.style.display="none";
+          } else {
+            //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
+            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
+            s2.classList.remove("swap-icon-available");
+            s2.classList.add("swap-icon-unavailable");
+            s2.classList.remove("swap-icon-used");
+            s2c.style.display="none";
+          }
+        }
+        //tmpHtml += "<br/>";
+      }
+      //document.getElementById("bank").innerHTML = tmpHtml;
+    }
+
+    function StartSwap(btn) {
+      console.log("StartSwap()");
+      if (clickMode == "swap") {
+        //Cancel the swap
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        document.getElementById("SwapButton"+btn+"Background").classList.remove("swap-border-animated");
+        setTimeout(() => {
+          clickMode = "none";
+        }, 200);
+      } else {
+        //Start the swap
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        document.getElementById("SwapButton"+btn+"Background").classList.add("swap-border-animated");
+        setTimeout(() => {
+          clickMode = "swap";
+        }, 200);
+      }
+    }
+    
+    
+//    tmp = document.getElementById("testPawn");
+//    tmp2 = document.getElementById("testQueen")
+    
+    function NewGame(seed=null, type=null) {
+      if (seed !== null) {
+        console.log("seed not null");
+      } else {
+        if (type == "random") {
+          console.log("seed null, type random");
+          seed=Math.floor(Math.random()*100000).toString();
+        } else if (type == "seed") {
+        console.log("seed null, type seed");
+          seed=document.getElementById("seedbox").value.toString();
+        }
+      }
+      document.getElementById("seedbox").value=seed;
+      console.log(seed);
+      moveHist = [];
+      moveHistory = [];
+      document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
+      document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
+      bag = [ [11], [11], [11], [12], [12], [12], [13], [13], [13], [21], [21], [21], [22], [22], [22], [23], [23], [23], [31], [31], [31], [32], [32], [32], [33], [33], [33], [41], [41], [41], [42], [42], [42], [43], [43], [43], [51], [51], [51], [52], [52], [52], [53], [53], [53] ];
+      Math.seedrandom(seed);
+      var result = ShuffleBag();
+      if (result) {
+        UpdatePiecesOnBoard();
+      } else {
+        alert("Can't use this seed");
+      }
+    }
+    
+    function UpdateCellValues(col, row, full=false) {
+      console.log("UpdateCellValues("+col+", "+row+")");
+      //Just set the col, row, and elev attributes of the piece to match where it is
+      for (var p=0; p<cells[col][row].length; p++) {
+        cells[col][row][p].col = col;
+        cells[col][row][p].row = row;
+        cells[col][row][p].elev = p;
+        if (full) {
+          cells[col][row][p].bank = false;
+          var tmpPiece = document.getElementById(cells[col][row][p].id);
+          tmpPiece.setAttribute("width", pieceSizes[cells[col][row][p].size]);
+          tmpPiece.setAttribute("height", pieceSizes[cells[col][row][p].size]);
+        }
+      } 
+    }
+    
+    function UndoLast() {
+      console.log("UndoLast()");
+      if (moveHistory.length <= 0) {
+        console.log("No hisotry to undo.");
+        return;
+      }
+      var oldCol, oldRow, tarCol, tarRow, tmpPieces, oldPieces, tarPieces;
+      tmpMove = moveHistory.pop();
+      moveHist.pop();
+      if (tmpMove[0] == "move" || tmpMove[0] == "top") {
+        //moveHistory format: [ "move/top", [fromCol, fromRow], [pieces], [toCol, toRow] ]
+        oldCol = tmpMove[1][0];
+        oldRow = tmpMove[1][1];
+        tmpPieces = tmpMove[2];
+        tarCol = tmpMove[3][0];
+        tarRow = tmpMove[3][1];
+        //Concat the contents of the old cell with the pieces moved
+        cells[oldCol][oldRow] = cells[oldCol][oldRow].concat(tmpPieces);
+        UpdateCellValues(oldCol, oldRow);
+        //Splice off the pieces from the target cell
+        cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,cells[tarCol][tarRow].indexOf(tmpPieces[0]));
+      } else if (tmpMove[0] == "slide") {
+        //moveHistory format: [ "slide", [ [fromCol, fromRow], [pieces], [toCol, toRow] ] ]
+        //Basically the same as a "move" but with an array of moves to undo
+        for (s=tmpMove[1].length-1; s>=0; s--) {
+          oldCol = tmpMove[1][s][0][0];
+          oldRow = tmpMove[1][s][0][1];
+          tmpPieces = tmpMove[1][s][1];
+          tarCol = tmpMove[1][s][2][0];
+          tarRow = tmpMove[1][s][2][1];
+          //Concat the contents of the old cell with the pieces moved
+          //pieces[tmpMove[1][s][0]] = pieces[tmpMove[1][s][0]].concat(tmpMove[1][s][1]);
+          cells[oldCol][oldRow] = cells[oldCol][oldRow].concat(tmpPieces);
+          UpdateCellValues(oldCol, oldRow);
+          //Splice off the pieces from the target cell
+          //pieces[tmpMove[1][s][2]] = pieces[tmpMove[1][s][2]].splice(0,pieces[tmpMove[1][s][2]].indexOf(tmpMove[1][s][1][0]));
+          cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,cells[tarCol][tarRow].indexOf(tmpPieces[0]));
+          UpdateCellValues(tarCol, tarRow);
+        }
+      } else if (tmpMove[0] == "bank") {
+        //moveHistory format: [ "bank", [fromCol, fromRow], [pieces] ]
+        oldCol = tmpMove[1][0];
+        oldRow = tmpMove[1][1];
+        oldPieces = tmpMove[2];
+        cells[oldCol][oldRow] = bank[bank.length-1];
+        bank.pop();
+        UpdateCellValues(oldCol, oldRow, true);
+      } else if (tmpMove[0] == "swap") {
+        //moveHistory format: [ "swap", [fromCol, fromRow], [pieces], [toCol, toRow], [pieces] ]
+        oldCol = tmpMove[1][0];
+        oldRow = tmpMove[1][1];
+        oldPieces = tmpMove[2];
+        tarCol = tmpMove[3][0];
+        tarRow = tmpMove[3][1];
+        tarPieces = tmpMove[4];
+        //pieces[tmpMove[1]] = tmpMove[2];
+        //pieces[tmpMove[3]] = tmpMove[4];
+        cells[oldCol][oldRow] = oldPieces;
+        cells[tarCol][tarRow] = tarPieces;
+        UpdateCellValues(oldCol, oldRow);
+        UpdateCellValues(tarCol, tarRow);
+        swapsUsed--;
+      }
+      UpdateBank();
+      UpdatePiecesOnBoard();
+      ClearCellHighlights();
+      selectedCell = [-1, -1];
+      clickMode = "none";
+    }
+    
+    function enterKeySeed(e) {
+        //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
+        if (e.keyCode == 13) {
+            NewGame(null, "seed");
+            return false;
+        }
+    }    
+    
+    SetBoardColors(4);
+    SetPyramidColors(1);
+    DrawTable();
+    setTimeout(() => {
+//      tmp.setAttribute("x", 150);
+//      tmp.setAttribute("y", 150);
+//      tmp2.setAttribute("x", 200);
+//      tmp2.setAttribute("y", 50);
+        InitialPiecesOnBoard();
+    }, 500);
+
+
+    
+    setTimeout(() => {
+      if (urlParams.get("seed") !== null) {
+        seed = urlParams.get("seed");
+        document.getElementById("seedbox").value=seed;
+        NewGame(seed);
+      } else {
+        seed=Math.floor(Math.random()*100000).toString();
+        NewGame(seed);
+      }
+    }, 1000);
+    
+    
+    //adjustCSSRules('.icon-two-part.style1', '--color-1: #ffff00');
+    //adjustCSSRules('.icon-two-part.style1', '--color-2: #ff0000');
+    
+  </script>
+</body>
+</html>
