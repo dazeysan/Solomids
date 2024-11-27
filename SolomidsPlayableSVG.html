@@ -3,7 +3,9 @@
 <head>
   <title>SVG Test</title>
   
-    <script>
+  <script src="fflate0.8.2.js"></script>
+  
+  <script>
     // Copyright for the random seed code:
     /*
     Copyright 2014 David Bau.
@@ -259,7 +261,8 @@
   </script>
   
   <style>
-      /* Styling for multi-color svgs */
+    /* Styling for multi-color svgs */
+    /* Note: most of this gets replaced by the config */
     .icon-two-part.style1 {
       --color-1: #ff0000;
       --color-2: #000000;
@@ -343,7 +346,7 @@
     }
     
     .icon-two-part.swap-icon-available {
-      --color-1: #00ff00;
+      --color-1: #008000;
     }
     .icon-two-part.swap-icon-unavailable {
       --color-1: #444444;
@@ -369,6 +372,57 @@
       }
     }
     
+    #board_div {
+      width:500px;
+      height:500px;
+      background:red;
+      border: 25px solid transparent;
+      border-image-slice: 27 27 27 27;
+      border-image-width: 25px 25px 25px 25px;
+      border-image-outset: 0px 0px 0px 0px;
+      border-image-repeat: stretch stretch;
+      border-image-source: url("Woodgrain3.png");
+    }
+    
+    #settings_div {
+      max-height: 0;
+      transition: max-height 0.5s ease-out;
+      overflow: hidden;
+      background: #d5d5d5;
+      margin-left: 10px;
+    }
+
+    #settings_div.open {
+        max-height: 200px;
+        transition: max-height 0.5s ease-in;
+    }
+
+    #customStashColorPickerDiv {
+      display: grid;
+      grid-template-columns: auto auto auto auto auto;
+      /*background-color: #2196F3;*/
+      padding: 0px;
+    }
+
+    #customStashColorPickerDiv > * {
+      /*background-color: rgba(255, 255, 255, 0.8);*/
+      /*border: 1px solid rgba(0, 0, 0, 0.8);*/
+      /*padding: 20px;*/
+      font-size: 30px;
+      text-align: center;
+    }
+    
+    #historyBox {
+      position: absolute;
+      top: 250px;
+      left: 270px;
+      background: #ccc;
+      width: 215px;
+      height: 200px;
+      border: 2px solid;
+      border-radius: 5px;
+    }
+    
     /* Disable double-tap */
     * {
       -webkit-tap-highlight-color: transparent;
@@ -381,13 +435,73 @@
 <body>
 
   <div style="">
-    <div id="controls_div" style="margin: 10px;">
+    <div id="controls_div" style="margin: 10px; width: 530px;">
       <button type="button" onClick="Javascript:NewGame(null, 'seed');">Seeded Game</button>
       <input type="text" id="seedbox" onkeypress="return enterKeySeed(event)" />
       <button type="button" onClick="Javascript:NewGame(null, 'random');">Random Game</button>
-
+      <button type="button" onClick="Javascript:Settings('button');"style="float: right;">Settings</button>
     </div>
-    <div id="board_div" style="">
+    <div id="settings_div" style="width: 530px;">
+      <div id="settings_table" style="display: table;">
+        <div style="display: table-row;">
+          <div class="" style="width:200px; display: table-cell;">
+            <select id="stashSelector" onChange="SetPyramidColors(this.value);" style="width: 200px;">
+              <option value="0">Select pyramid colors:</option>
+              <option value="1">Rainbow Stash</option>
+              <option value="2">Xeno Stash</option>
+              <option value="3">Test Stash</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="" style="width:200px; display: table-cell;">
+            <select id="backgroundSelector" onChange="SetBoardColors(this.value);" style="width: 200px;">
+              <option value="0">Select board colors:</option>
+              <option value="1">Black & White</option>
+              <option value="2">White & Black</option>
+              <option value="3">White & Light Blue</option>
+              <option value="4">Peach & Grey</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: table-row;">
+          <div style="display: table-cell;">
+            <div id="customStashColorPickerDiv" style="display: none;">
+              <input type="color" id="customStashColorPicker1" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker2" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker3" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker4" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker5" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" />
+              <input type="checkbox" id="customStashPipColorPicker1" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker2" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker3" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker4" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker5" onChange="javascript:{SetCustomStashColor();}" />
+
+              <!--<input type="button" value="Save custom stash" />-->
+            </div>
+          </div>
+          <div style="display: table-cell;">
+            <div id="customBoardColorPickerDiv" style="display: none; text-align: center;">
+              <input type="color" id="customBoardColorPicker0" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" /><!--
+          --><input type="color" id="customBoardColorPicker1" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" />
+            </div>
+          </div>
+        </div>
+        <!--<div style="display: table-row;">
+          <div style="display: table-cell;">
+            <input type="checkbox" id="checkShadow" onClick="javascript:{setStyle('shadow');}" /><label for="checkShadow">Shadow</label><!--
+         - -><input type="checkbox" id="checkShadowInverted" onClick="javascript:{setStyle('shadowinverted');}" /><label for="checkShadowInverted">Inverted</label><br/>
+            <input type="checkbox" id="checkOutline" checked onClick="javascript:{setStyle('outline');}" /><label for="checkOutline">Outline</label><!--
+         - -><input type="checkbox" id="checkOutlineInverted" onClick="javascript:{setStyle('outlineinverted');}" /><label for="checkOutlineInverted">Inverted</label><br/>
+          </div>
+          <div style="display: table-cell;">
+            <!- - empty - ->
+          </div>
+        </div>-->
+      </div>
+    </div>
+    <div id="board_div" style="position: relative;">
       <svg id="table" xmlns="http://www.w3.org/2000/svg" width="250" height="500" viewBox="0 0 250 500">
       <rect width="100%" height="100%" fill="#aaaaaa" />
         <symbol id="Pawn-icon" viewBox="-5 -5 147.6 178.9">
@@ -415,6 +529,18 @@
           <path class="swap" fill="var(--color-1)" stroke="var(--color-1)" stroke-width="var(--stroke-1)" d="M0 30.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM0.032 10.368q-0.096-0.608 0.128-1.152t0.704-0.864 1.152-0.352h1.984q0-2.464 1.76-4.224t4.256-1.76h4q0.704 0 1.216 0.416t0.64 0.992 0 1.184-0.64 0.992-1.216 0.416h-4q-0.832 0-1.44 0.576t-0.576 1.408h2.016q0.64 0 1.152 0.384t0.704 0.864 0.096 1.12-0.544 1.056l-4 4q-0.64 0.608-1.44 0.608t-1.376-0.608l-4-4q-0.48-0.448-0.576-1.056zM4 28h4v-4h-4v4zM16.128 28.608q-0.096-0.608 0-1.184t0.64-0.992 1.248-0.416h4q0.8 0 1.408-0.576t0.576-1.44h-1.984q-0.672 0-1.184-0.352t-0.704-0.896-0.096-1.12 0.576-1.024l4-4q0.608-0.608 1.408-0.608t1.408 0.576l4 4q0.48 0.48 0.576 1.088t-0.16 1.12-0.704 0.864-1.12 0.352h-2.016q0 2.496-1.76 4.256t-4.224 1.76h-4q-0.736 0-1.248-0.416t-0.64-0.992zM20 10.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM24 8h4v-4h-4v4z"></path>
         </symbol>
       </svg>
+      <div id="historyBox">test<br/>
+        <textarea id="historyBoxText" style="width: 190px; margin: 8px; height: 100px; font-size: 1.3em;"></textarea>
+        <button type="button" onClick="javascript:{PlaybackHistory(document.getElementById('historyBoxText').value);};" >Load</button>
+        <button type="button" onClick="javascript:{HistoryStepBackward();};" >Step Back</button>
+        <button type="button" onClick="javascript:{HistoryStepForward();};" >Step Fwd</button>
+        <button type="button" onClick="javascript:{HistoryPlay();};" >Play</button>
+        <button type="button" onClick="javascript:{HistoryPause();};" >Pause</button>
+        <button type="button" onClick="javascript:{HistoryRewind();};" >Rewind</button>
+        <button type="button" onClick="javascript:{HistorySpeed(1.0);};" >1x</button>
+        <button type="button" onClick="javascript:{HistorySpeed(0.5);};" >2x</button>
+        
+      </div>
     </div>
 
   </div>
@@ -431,10 +557,17 @@
     var pieceToCellRatio = 0.8;  //Size of Queen pyramid vs smallest square dimension
     var piecesRatio = [0.4, 0.6, 0.8, 1.0]; //Ratio of smallpawn, Pawn, Drone, and Queen vs Queen
     
+    
+    // The stashColors arrays are layed out like this:
+    // 0     = Name
+    // 1-5   = Pyramid Colors
+    // 6-10  = Pip Colors  (This and the following default to black if not specified)
+    // 11-15 = Pyramid Stroke Color
+    // 16-20 = Pip Stroke Color
     var stashColors = [ 
       ["Select pyramid colors:"], 
-      ["Rainbow Stash", "#f00", "#d3d319", "#008000", "#00f", "#000", "#000", "#000", "#000", "#fff", "#fff", "#000", "#000", "#000", "#00f", "#fff"], 
-      ["Xeno Stash", "#0ff", "#800080", "#ffa500", "#eee", "#555"], 
+      ["Rainbow Stash", "#ff0000", "#d3d319", "#008000", "#0000ff", "#000000", "#000000", "#000000", "#000000", "#ffffff", "#ffffff", "#000000", "#000000", "#000000", "#ffffff", "#ffffff"], 
+      ["Xeno Stash", "#00ffff", "#800080", "#ffa500", "#eeeeee", "#555555"], 
       ["Test Stash", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
     ];  //the Xeno stash should be clear and opaque white, not greys
     var boardColors = [
@@ -442,8 +575,11 @@
       ["#000000", "#ffffff", "Black & White"],
       ["#ffffff", "#000000", "White & Black"],
       ["#ffffff", "#bbddff", "White & Light Blue"],
-      ["#ffdab9", "#858585", "Peach & Grey"]
+      ["#ffdab9", "#a2a2a2", "Peach & Grey"]
     ];
+    var customStashColor = [];
+    var customBoardColor = [];
+  
     
     //Fill the "bag" with all of the pieces
     //DO NOT change the order of the pieces or you will break the seed consistancy
@@ -459,6 +595,9 @@
     }
     var pieceSizes = [0, Math.floor(small*(pieceToCellRatio*piecesRatio[1])), Math.floor(small*(pieceToCellRatio*piecesRatio[2])), Math.floor(small*(pieceToCellRatio*piecesRatio[3]))];
     var pieceSizeNames = ["none", "Pawn-icon", "Drone-icon", "Queen-icon"];
+    var colNames = ["A", "B", "C", "D", "E"];
+    var rowNames = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    var shortSizeNames = ["none", "P", "D", "Q"];
     var piecesWithIds = {};
     
     const urlParams = new URLSearchParams(window.location.search);
@@ -470,9 +609,17 @@
 
     var moveHistory = [];
     var moveHist = [];
-
+    var historyPosition = 0;
+    var record = true;
+    var recordedHistory = "";
+    var playing = false;
+    var histPlayTimeout;
+    var moveSpeed = 1.0;
+    
     var bank = [];
     var score = 0;
+    
+    var settingsVisible = false;
     
     const svg = document.getElementById("table");
     const svgns = "http://www.w3.org/2000/svg";
@@ -510,8 +657,61 @@
     }, false);
     clickLayer.appendChild(clickRect);
   
+    
+    function Settings(source) {
+      setDiv = document.getElementById("settings_div");
+      if (settingsVisible) {
+        //hide settings
+        settingsVisible = false;
+        //setDiv.style.display = "none";
+        setDiv.classList.remove("open");
+      } else {
+        //show settings
+        settingsVisible = true;
+        //setDiv.style.display = "block";
+        setDiv.classList.add("open");
+      }
+    }
+
+    function SetCustomStashColor() {
+      pyramidColors[1] = document.getElementById("customStashColorPicker1").value;
+      pyramidColors[2] = document.getElementById("customStashColorPicker2").value;
+      pyramidColors[3] = document.getElementById("customStashColorPicker3").value;
+      pyramidColors[4] = document.getElementById("customStashColorPicker4").value;
+      pyramidColors[5] = document.getElementById("customStashColorPicker5").value;
+      for (var c=1; c<=5; c++) {
+        tmpPipColor = "#000000";
+        if (document.getElementById("customStashPipColorPicker"+c).checked) {
+          tmpPipColor = "#ffffff";
+        }
+        pyramidColors[5+c] = tmpPipColor;
+        pyramidColors[10+c] = tmpPipColor;
+      }
+      
+      customStashColor=[...pyramidColors];
+      customStashColor[0]="Custom-"+customStashColor[0];
+      //saveSettings();
+      SetPyramidColors("custom");
+      //DrawTable();
+      //DisplayPieces();
+    }
+
+    function SetCustomBoardColor() {
+      fillColors[0] = document.getElementById("customBoardColorPicker0").value;
+      fillColors[1] = document.getElementById("customBoardColorPicker1").value;
+      customBoardColor=[...fillColors];
+      customBoardColor[2]="Custom-"+customBoardColor[2];
+      //saveSettings();
+      //DrawBoard();
+      SetBoardColors("custom");
+      //DisplayPieces();
+    }
+
+    
+    
     function BoardClicked(event, type=0){
-      console.log("Board Clicked: "); console.log(event);
+      console.log("Board Clicked: ");
+      //console.log(event);
       var x = event.clientX - clickLayer.getBoundingClientRect().left;
       var y = event.clientY - clickLayer.getBoundingClientRect().top;
       var col = Math.ceil(x/cellWidth)-1;
@@ -553,31 +753,37 @@
             swap1 = [-1, -1];
           } else {
             //Must have clicked a 2nd cell, swap them
-            var tmpSwap = cells[col][row];
-            var tmpPos2 = [swap1[0], swap1[1]];
-            moveHistory.push(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]]);
-            moveHist.push(["w", [col,row], tmpPos2]);
-            cells[col][row] = cells[swap1[0]][swap1[1]];
-            for (var o=0; o<cells[col][row].length; o++) {
-              cells[col][row][o].col = col;
-              cells[col][row][o].row = row;
-            }
-            cells[swap1[0]][swap1[1]] = tmpSwap;
-            for (var n=0; n<cells[swap1[0]][swap1[1]].length; n++) {
-              cells[swap1[0]][swap1[1]][n].col = swap1[0];
-              cells[swap1[0]][swap1[1]][n].row = swap1[1];
-            }
-            document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
-            document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
-            swapsUsed++;
-            ClearCellHighlights();
-            swap1 = [-1, -1];
-            UpdatePiecesOnBoard();
-            UpdateBank();
-            clickMode = "none";
+            SwapPyramids(col, row);
           }
         }
       }
+    }
+    
+    function SwapPyramids(col, row) {
+      var tmpSwap = cells[col][row];
+      var tmpPos2 = [swap1[0], swap1[1]];
+      if (record) {
+        moveHistory.push(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]]);
+      }
+      //moveHist.push(["w", [col,row], tmpPos2]);
+      cells[col][row] = cells[swap1[0]][swap1[1]];
+      for (var o=0; o<cells[col][row].length; o++) {
+        cells[col][row][o].col = col;
+        cells[col][row][o].row = row;
+      }
+      cells[swap1[0]][swap1[1]] = tmpSwap;
+      for (var n=0; n<cells[swap1[0]][swap1[1]].length; n++) {
+        cells[swap1[0]][swap1[1]][n].col = swap1[0];
+        cells[swap1[0]][swap1[1]][n].row = swap1[1];
+      }
+      document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
+      document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
+      swapsUsed++;
+      ClearCellHighlights();
+      swap1 = [-1, -1];
+      UpdatePiecesOnBoard();
+      UpdateBank();
+      clickMode = "none";
     }
     
     function FullTreeSelected(col, row, type) {
@@ -590,8 +796,10 @@
           cells[col][row][p].bank = true;
         }
         bank.push(cells[col][row]);
-        moveHistory.push(["bank", [col,row], cells[col][row]]);
-        moveHist.push(["b", tmpPos, Number(cells[col][row][0].toString()[0])]);
+        if (record) {
+          moveHistory.push(["bank", [col,row], cells[col][row]]);
+        }
+        //moveHist.push(["b", tmpPos, Number(cells[col][row][0].toString()[0])]);
         cells[col][row] = [];
         UpdateBank();
         UpdatePiecesOnBoard();
@@ -625,7 +833,7 @@
       sText.id = "score-text";
       sText.setAttribute("x", 270);
       sText.setAttribute("y", 10);
-      sText.setAttribute("fill", "#000");
+      sText.setAttribute("fill", "#000000");
       sText.setAttribute("font", "Arial");
       sText.setAttribute("dominant-baseline", "hanging");
       sText.innerHTML = "Score: 0";
@@ -648,8 +856,8 @@
       s1Rect.setAttribute("width", 40);
       s1Rect.setAttribute("height", 40);
       s1Rect.setAttribute("rx", 5);
-      s1Rect.setAttribute("fill", "#fff");
-      s1Rect.setAttribute("stroke", "#000");
+      s1Rect.setAttribute("fill", "#ffffff");
+      s1Rect.setAttribute("stroke", "#000000");
       tableau.appendChild(s1Rect);
       addShape2(tableau, "Swap-icon", "SwapButton1", 415, 45, 30, 30, "swap-icon-unavailable");
       var s1cRect = document.createElementNS(svgns, "rect");
@@ -674,8 +882,8 @@
       s1Rect.setAttribute("width", 40);
       s1Rect.setAttribute("height", 40);
       s1Rect.setAttribute("rx", 5);
-      s1Rect.setAttribute("fill", "#fff");
-      s1Rect.setAttribute("stroke", "#000");
+      s1Rect.setAttribute("fill", "#ffffff");
+      s1Rect.setAttribute("stroke", "#000000");
       tableau.appendChild(s1Rect);
       addShape2(tableau, "Swap-icon", "SwapButton2", 415, 95, 30, 30, "swap-icon-unavailable");
       var s1cRect = document.createElementNS(svgns, "rect");
@@ -700,13 +908,13 @@
       bRect.setAttribute("width", 75);
       bRect.setAttribute("height", 35);
       bRect.setAttribute("rx", 5);
-      bRect.setAttribute("fill", "#fff");
-      bRect.setAttribute("stroke", "#000");
+      bRect.setAttribute("fill", "#ffffff");
+      bRect.setAttribute("stroke", "#000000");
       tableau.appendChild(bRect);
       var bText = document.createElementNS(svgns, "text");
       bText.setAttribute("x", 275);
       bText.setAttribute("y", 210);
-      bText.setAttribute("fill", "#000");
+      bText.setAttribute("fill", "#000000");
       bText.setAttribute("font", "Arial");
       bText.setAttribute("dominant-baseline", "hanging");
       bText.innerHTML = "\u2934 Bank";
@@ -731,13 +939,13 @@
       bRect2.setAttribute("width", 75);
       bRect2.setAttribute("height", 35);
       bRect2.setAttribute("rx", 5);
-      bRect2.setAttribute("fill", "#fff");
-      bRect2.setAttribute("stroke", "#000");
+      bRect2.setAttribute("fill", "#ffffff");
+      bRect2.setAttribute("stroke", "#000000");
       tableau.appendChild(bRect2);
       var bText2 = document.createElementNS(svgns, "text");
       bText2.setAttribute("x", 375);
       bText2.setAttribute("y", 210);
-      bText2.setAttribute("fill", "#000");
+      bText2.setAttribute("fill", "#000000");
       bText2.setAttribute("font", "Arial");
       bText2.setAttribute("dominant-baseline", "hanging");
       bText2.innerHTML = "↶ Undo";
@@ -752,6 +960,48 @@
       bRect2.addEventListener('click', function(event) {
         console.log("Undo Button Clicked");
         UndoLast();
+      }, false);
+      tableau.appendChild(bRect2);
+      
+      //Draw the Moves count
+      var mText = document.createElementNS(svgns, "text");
+      mText.id = "moves-text";
+      mText.setAttribute("x", 270);
+      mText.setAttribute("y", 470);
+      mText.setAttribute("fill", "#000000");
+      mText.setAttribute("font", "Arial");
+      mText.setAttribute("dominant-baseline", "hanging");
+      mText.innerHTML = "Moves: 0";
+      tableau.appendChild(mText);
+      
+      //Draw the History button
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 400);
+      bRect2.setAttribute("y", 460);
+      bRect2.setAttribute("width", 67);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("rx", 5);
+      bRect2.setAttribute("fill", "#ffffff");
+      bRect2.setAttribute("stroke", "#000000");
+      tableau.appendChild(bRect2);
+      var bText2 = document.createElementNS(svgns, "text");
+      bText2.setAttribute("x", 405);
+      bText2.setAttribute("y", 470);
+      bText2.setAttribute("fill", "#000000");
+      bText2.setAttribute("font", "Arial");
+      bText2.setAttribute("dominant-baseline", "hanging");
+      bText2.innerHTML = "History";
+      tableau.appendChild(bText2);
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 400);
+      bRect2.setAttribute("y", 460);
+      bRect2.setAttribute("width", 67);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("fill-opacity", 0.0);
+      bRect2.style.cursor = "pointer";
+      bRect2.addEventListener('click', function(event) {
+        console.log("History Button Clicked");
+        History();
       }, false);
       tableau.appendChild(bRect2);
       
@@ -922,12 +1172,36 @@
         }
       } while (p>0);
       bag=newBag;
-      pieces = [[], [], [], [], []];
-      for (b=0; b<bag.length; b++) {
-        pieces[b+5]=[bag[b]];
-      }
+      //pieces = [[], [], [], [], []];
+      //for (b=0; b<bag.length; b++) {
+      //  pieces[b+5]=[bag[b]];
+      //}
       
-      var tmpBag = JSON.parse(JSON.stringify(bag));;
+      var tmpBag = JSON.parse(JSON.stringify(bag));
+      console.log(JSON.stringify(cells));
+      
+      /*
+      var tmpCells = new Array(boardWidth).fill(0).map(() => new Array(boardHeight).fill([]));
+      for (var col=0; col<=4; col++) {
+        for (var row=0; row<=9; row++) {
+          var tmpPiece = ""+cells[col][row][0].color+cells[col][row][0].size;
+          for (var p=0; p<tmpBag.length; p++) {
+            if (tmpBag[p][0] == tmpPiece) {
+              var tmpCol = p%boardWidth;
+              var tmpRow = Math.floor(p/boardWidth)+1;
+              tmpBag[p][0] = null;
+              tmpCells[tmpCol][tmpRow] = JSON.parse(JSON.stringify(cells[col][row]));
+              tmpCells[tmpCol][tmpRow].col = tmpCol;
+              tmpCells[tmpCol][tmpRow].row = tmpRow;
+              tmpCells[tmpCol][tmpRow].elev = 0;
+              tmpCells[tmpCol][tmpRow].bank = false;
+              break;
+            }
+          }
+        }
+      }*/
+      
+          
       for (var key in piecesWithIds) {
         if (piecesWithIds.hasOwnProperty(key)) {
           var tmpPiece = ""+piecesWithIds[key].color+piecesWithIds[key].size;
@@ -941,14 +1215,6 @@
               break;
             }
           }
-        }
-      }
-      for (var c=0; c<5; c++) {
-        cells[c][0] = [];
-      }
-      bank = [];
-      for (var key in piecesWithIds) {
-        if (piecesWithIds.hasOwnProperty(key)) {
           piecesWithIds[key].bank = false;
           tmpElem = document.getElementById(piecesWithIds[key].id);
           tmpElem.setAttribute("width", pieceSizes[piecesWithIds[key].size]);
@@ -956,6 +1222,10 @@
         }
       }
       
+      for (var c=0; c<5; c++) {
+        cells[c][0] = [];
+      }
+      bank = [];
       console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors+", "+tmpSizeDistErrors+", "+tmpAttempts);
       var t1 = performance.now();
       console.log(`ShuffleBag() took ${t1 - t0} milliseconds.`);
@@ -963,35 +1233,89 @@
     }
     
     function SetPyramidColors(pallete) {
-      pyramidColors=[...stashColors[pallete]];
-      console.log("SetPyramidColors("+pallete+") - "+stashColors[pallete]);
+      console.log("SetPyramidColors("+pallete+")");
+      if (pallete == "custom") {
+        document.getElementById("customStashColorPickerDiv").style.display="";
+        if (customStashColor.length == 0) {
+          for (var p=1; p<=5; p++) {
+            document.getElementById("customStashColorPicker"+p).value=pyramidColors[p];
+          }
+          for (var c=1; c<=5; c++) {
+            tmpCheck = false;
+            if (pyramidColors[5+c] == "#ffffff") {
+              tmpCheck = true;
+            }
+            document.getElementById("customStashPipColorPicker"+c).checked = tmpCheck;
+          }
+        } else {
+          for (var p=1; p<=5; p++) {
+            document.getElementById("customStashColorPicker"+p).value=customStashColor[p];
+          }
+          for (var c=1; c<=5; c++) {
+            tmpCheck = false;
+            if (customStashColor[5+c] == "#ffffff") {
+              tmpCheck = true;
+            }
+            document.getElementById("customStashPipColorPicker"+c).checked = tmpCheck;
+          }
+          pyramidColors=[...customStashColor];
+        }
+      } else {
+        document.getElementById("customStashColorPickerDiv").style.display="none";
+        pyramidColors=[...stashColors[pallete]];
+        console.log("SetPyramidColors("+pallete+") - "+stashColors[pallete]);
+      }
       for (r=1; r<=5; r++) {
         adjustCSSRules('.icon-two-part.style'+r, '--color-1: '+pyramidColors[r]);
         adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-1: '+pyramidColors[r]);
         var tmpPipColor = "#000000";
         if (pyramidColors[r+5] !== undefined) {
           tmpPipColor = pyramidColors[r+5];
+        } else {
+          pyramidColors[r+5] = tmpPipColor;
         }
         adjustCSSRules('.icon-two-part.style'+r, '--color-2: '+tmpPipColor);
         adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-2: '+tmpPipColor);
         var tmpPyramidStroke = "#000000";
         if (pyramidColors[r+10] !== undefined) {
           tmpPyramidStroke = pyramidColors[r+10];
+        } else {
+          pyramidColors[r+10] = tmpPyramidStroke;
         }
         adjustCSSRules('.icon-two-part.style'+r, '--color-3: '+tmpPyramidStroke);
         adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-3: '+tmpPyramidStroke);
         var tmpPipStroke = "#000000";
         if (pyramidColors[r+15] !== undefined) {
           tmpPipStroke = pyramidColors[r+15];
+        } else {
+          pyramidColors[r+15] = tmpPipStroke;
         }
         adjustCSSRules('.icon-two-part.style'+r, '--color-4: '+tmpPipStroke);
         adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-4: '+tmpPipStroke);
       }
+      //DrawTable();
     }
     
     function SetBoardColors(pallete) {
-      fillColors=[...boardColors[pallete]];
+      if (pallete == "custom") {
+        document.getElementById("customBoardColorPickerDiv").style.display="";
+        if (customBoardColor.length == 0) {
+          document.getElementById("customBoardColorPicker0").value=fillColors[0];
+          document.getElementById("customBoardColorPicker1").value=fillColors[1];
+        } else {
+          document.getElementById("customBoardColorPicker0").value=customBoardColor[0];
+          document.getElementById("customBoardColorPicker1").value=customBoardColor[1];
+          fillColors=[...customBoardColor];
+        }
+      } else {
+        document.getElementById("customBoardColorPickerDiv").style.display="none";
+        fillColors = [...boardColors[pallete]];
+        //SetBoardColors(pallete);
+      }
+      
+      //fillColors=[...boardColors[pallete]];
       console.log("SetBoardColors("+pallete+") - "+fillColors[2]);
+      //DrawTable();
     }
     
     function AddCellHighlight(col, row) {
@@ -1002,7 +1326,7 @@
       hRect.setAttribute("y", (row*cellHeight)+cellHeight*0.05);
       hRect.setAttribute("width", cellWidth*0.9);
       hRect.setAttribute("height", cellHeight*0.9);
-      hRect.setAttribute("fill", "#fff");
+      hRect.setAttribute("fill", "#ffffff");
       hRect.setAttribute("fill-opacity", 0.0);
       hRect.setAttribute("stroke", "pink");
       hRect.setAttribute("stroke-width", cellWidth*0.1);
@@ -1089,8 +1413,10 @@
               break;
             }
           }
-          moveHistory.push(["slide", tmpHist]);
-          moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
+          if (record) {
+            moveHistory.push(["slide", tmpHist]);
+          }
+          //moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
           UpdatePiecesOnBoard();
           ClearCellHighlights();
           selectedCell = [-1, -1];
@@ -1190,8 +1516,10 @@
         if (colorsOK && orthogOK && pathOK && (sizesOK || topMove)) {
           if (sizesOK && !topMove) {
             console.log("Move that Piece(s)!");
-            moveHistory.push(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]]);
-            moveHist.push(["m", oldPos, targetPos]);
+            if (record) {
+              moveHistory.push(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]]);
+            }
+            //moveHist.push(["m", oldPos, targetPos]);
             for (o=0; o<oldCell.length; o++) {
               cells[oldCol][oldRow][o].col = tarCell[0].col;
               cells[oldCol][oldRow][o].row = tarCell[0].row;
@@ -1203,18 +1531,22 @@
             cells[oldCol][oldRow] = [];
           } else if (!sizesOK && topMove) {
             console.log("Move that TOP Piece(s)!");
-            tmpStack = cells[oldCol][oldRow].slice(topMoveElev);
+            var tmpStack = cells[oldCol][oldRow].slice(topMoveElev);
             console.log(tmpStack);
-            moveHistory.push(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]]);
-            moveHist.push(["t", oldPos, targetPos]);
-            for (t=0; t<tmpStack.length; t++) {
-              tmpStack[t].col = tarCell[0].col;
-              tmpStack[t].row = tarCell[0].row;
+            if (record) {
+              moveHistory.push(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]]);
             }
+            //moveHist.push(["t", oldPos, targetPos]);
+            //for (t=0; t<tmpStack.length; t++) {
+            //  tmpStack[t].col = tarCell[0].col;
+            //  tmpStack[t].row = tarCell[0].row;
+            //}
             cells[oldCol][oldRow] = cells[oldCol][oldRow].splice(0,topMoveElev);
             cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(tmpStack);                       
             for (var e=0; e<cells[targetCol][targetRow].length; e++) {
               cells[targetCol][targetRow][e].elev=e;
+              cells[targetCol][targetRow][e].col=targetCol;
+              cells[targetCol][targetRow][e].row=targetRow;
             }
           }
           //DisplayPieces();
@@ -1248,6 +1580,7 @@
           var tmpParent = tmpParents[bag[p].toString()[1]];
           addShape2(tmpParent, tmpShape, tmpId, tmpX, tmpY, tmpSize, tmpSize, tmpStyle);
           piecesWithIds[tmpId] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
+          //cells[tmpCol][tmpRow] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
         }
       }
       var t1 = performance.now();
@@ -1260,7 +1593,7 @@
         if (piecesWithIds.hasOwnProperty(key)) {
           if (!piecesWithIds[key].bank) {
             var tmpX = (piecesWithIds[key].col*cellWidth)+((cellWidth-pieceSizes[piecesWithIds[key].size])/2);
-            var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10;
+            var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10+((cells[piecesWithIds[key].col][piecesWithIds[key].row].length-1)*3);
             var tmpPiece = document.getElementById(key);
             tmpPiece.setAttribute("x", tmpX);
             tmpPiece.setAttribute("y", tmpY);
@@ -1269,11 +1602,15 @@
           }
         }
       }
+      document.getElementById("historyBoxText").value = ReadableHistory();
+      tmpMoves = "Moves: " + moveHistory.length;
+      document.getElementById("moves-text").innerHTML = tmpMoves;
       var t1 = performance.now();
       console.log(`UpdatePiecesOnBoard() took ${t1 - t0} milliseconds.`);
     }
   
     function UpdateBank() {
+      console.log("UpdateBank()");
       if (bank.length < 15) {
         score = bank.length;
       } else {
@@ -1407,22 +1744,29 @@
 //    tmp = document.getElementById("testPawn");
 //    tmp2 = document.getElementById("testQueen")
     
-    function NewGame(seed=null, type=null) {
-      if (seed !== null) {
-        console.log("seed not null");
+    function NewGame(seeder=null, type=null) {
+      if (seeder !== null) {
+        console.log("seeder not null");
+        seed = seeder;
       } else {
         if (type == "random") {
-          console.log("seed null, type random");
+          console.log("seeder null, type random");
           seed=Math.floor(Math.random()*100000).toString();
         } else if (type == "seed") {
-        console.log("seed null, type seed");
+        console.log("seeder null, type seed");
           seed=document.getElementById("seedbox").value.toString();
         }
       }
       document.getElementById("seedbox").value=seed;
       console.log(seed);
-      moveHist = [];
+      //moveHist = [];
       moveHistory = [];
+      clickMode = "none";
+      selectedCell = [-1, -1];
+      swap1 = [-1, -1];
+      swapsUsed = 0;
+      bank = [];
+      score = 0;
       document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
       document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
       bag = [ [11], [11], [11], [12], [12], [12], [13], [13], [13], [21], [21], [21], [22], [22], [22], [23], [23], [23], [31], [31], [31], [32], [32], [32], [33], [33], [33], [41], [41], [41], [42], [42], [42], [43], [43], [43], [51], [51], [51], [52], [52], [52], [53], [53], [53] ];
@@ -1431,7 +1775,7 @@
       if (result) {
         UpdatePiecesOnBoard();
       } else {
-        alert("Can't use this seed");
+        alert("This seed generates too many errors. Try another.");
       }
     }
     
@@ -1442,8 +1786,13 @@
         cells[col][row][p].col = col;
         cells[col][row][p].row = row;
         cells[col][row][p].elev = p;
+        piecesWithIds[cells[col][row][p].id].col = col;
+        piecesWithIds[cells[col][row][p].id].row = row;
+        piecesWithIds[cells[col][row][p].id].elev = p;
+        console.log(piecesWithIds[cells[col][row][p].id]);
         if (full) {
           cells[col][row][p].bank = false;
+          piecesWithIds[cells[col][row][p].id].bank = false;
           var tmpPiece = document.getElementById(cells[col][row][p].id);
           tmpPiece.setAttribute("width", pieceSizes[cells[col][row][p].size]);
           tmpPiece.setAttribute("height", pieceSizes[cells[col][row][p].size]);
@@ -1451,31 +1800,45 @@
       } 
     }
     
-    function UndoLast() {
+    function UndoLast(step=null) {
       console.log("UndoLast()");
       if (moveHistory.length <= 0) {
-        console.log("No hisotry to undo.");
+        console.log("No history to undo.");
         return;
       }
-      var oldCol, oldRow, tarCol, tarRow, tmpPieces, oldPieces, tarPieces;
-      tmpMove = moveHistory.pop();
-      moveHist.pop();
+      var oldCol, oldRow, tarCol, tarRow, tmpPieces, oldPieces, tarPieces, tmpIndex;
+      if (step === null) {
+        var tmpMove = moveHistory.pop();
+        //moveHist.pop();
+      } else {
+        var tmpMove = moveHistory[step];
+      }
       if (tmpMove[0] == "move" || tmpMove[0] == "top") {
         //moveHistory format: [ "move/top", [fromCol, fromRow], [pieces], [toCol, toRow] ]
+        console.log("Undo: move");
+        console.log("tmpMove: "+JSON.stringify(tmpMove));
         oldCol = tmpMove[1][0];
         oldRow = tmpMove[1][1];
         tmpPieces = tmpMove[2];
+        console.log("tmpPieces: "+JSON.stringify(tmpPieces));
         tarCol = tmpMove[3][0];
         tarRow = tmpMove[3][1];
+        tmpIndex = cells[tarCol][tarRow].length - tmpPieces.length;
+        console.log("tmpIndex: "+tmpIndex);
         //Concat the contents of the old cell with the pieces moved
+        console.log("cells[old}: "+JSON.stringify(cells[oldCol][oldRow]));
         cells[oldCol][oldRow] = cells[oldCol][oldRow].concat(tmpPieces);
-        UpdateCellValues(oldCol, oldRow);
+        console.log("cells[old]: "+JSON.stringify(cells[oldCol][oldRow]));
+        UpdateCellValues(oldCol, oldRow, true);
         //Splice off the pieces from the target cell
-        cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,cells[tarCol][tarRow].indexOf(tmpPieces[0]));
+        console.log("cells[tar]: "+JSON.stringify(cells[tarCol][tarRow]));
+        cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,tmpIndex);
+        console.log("cells[tar]: "+JSON.stringify(cells[tarCol][tarRow]));
+        UpdateCellValues(tarCol, tarRow, true);
       } else if (tmpMove[0] == "slide") {
         //moveHistory format: [ "slide", [ [fromCol, fromRow], [pieces], [toCol, toRow] ] ]
         //Basically the same as a "move" but with an array of moves to undo
-        for (s=tmpMove[1].length-1; s>=0; s--) {
+        for (var s=tmpMove[1].length-1; s>=0; s--) {
           oldCol = tmpMove[1][s][0][0];
           oldRow = tmpMove[1][s][0][1];
           tmpPieces = tmpMove[1][s][1];
@@ -1484,11 +1847,11 @@
           //Concat the contents of the old cell with the pieces moved
           //pieces[tmpMove[1][s][0]] = pieces[tmpMove[1][s][0]].concat(tmpMove[1][s][1]);
           cells[oldCol][oldRow] = cells[oldCol][oldRow].concat(tmpPieces);
-          UpdateCellValues(oldCol, oldRow);
+          UpdateCellValues(oldCol, oldRow, true);
           //Splice off the pieces from the target cell
           //pieces[tmpMove[1][s][2]] = pieces[tmpMove[1][s][2]].splice(0,pieces[tmpMove[1][s][2]].indexOf(tmpMove[1][s][1][0]));
           cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,cells[tarCol][tarRow].indexOf(tmpPieces[0]));
-          UpdateCellValues(tarCol, tarRow);
+          UpdateCellValues(tarCol, tarRow, true);
         }
       } else if (tmpMove[0] == "bank") {
         //moveHistory format: [ "bank", [fromCol, fromRow], [pieces] ]
@@ -1521,6 +1884,266 @@
       clickMode = "none";
     }
     
+    function ReadableHistory() {
+      var readable = seed+"_";
+      for (var h=0; h<moveHistory.length; h++) {
+        tmpMove = "";
+        if (moveHistory[h][0] == "move") {
+          tmpMove += "M-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          //for (var p=0; p<moveHistory[h][2].length; p++) {
+          //  tmpMove += moveHistory[h][2][p].color;
+          //  tmpMove += shortSizeNames[moveHistory[h][2][p].size];
+          //  tmpMove += "+";
+          //}
+          //tmpMove = tmpMove.slice(0,-1);
+          tmpMove += ">";
+          tmpMove += colNames[moveHistory[h][3][0]];
+          tmpMove += rowNames[moveHistory[h][3][1]];
+        } else if (moveHistory[h][0] == "top") {
+          tmpMove += "T-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          //for (var p=0; p<moveHistory[h][2].length; p++) {
+          //  tmpMove += moveHistory[h][2][p].color;
+          //  tmpMove += shortSizeNames[moveHistory[h][2][p].size];
+          //  tmpMove += "+";
+          //}
+          //tmpMove = tmpMove.slice(0,-1);
+          tmpMove += ">";
+          tmpMove += colNames[moveHistory[h][3][0]];
+          tmpMove += rowNames[moveHistory[h][3][1]];
+        } else if (moveHistory[h][0] == "bank") {
+          tmpMove += "B-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          //for (var p=0; p<moveHistory[h][2].length; p++) {
+          //  tmpMove += moveHistory[h][2][p].color;
+          //  tmpMove += shortSizeNames[moveHistory[h][2][p].size];
+          //  tmpMove += "+";
+          //}
+          //tmpMove = tmpMove.slice(0,-1);
+          //tmpMove += ">";
+        } else if (moveHistory[h][0] == "slide") {
+          tmpMove += "S-";
+          //for (var s=0; s<moveHistory[h][1].length; s++) {
+          for (var s=0; s<1; s++) {
+            tmpMove += colNames[moveHistory[h][1][s][0][0]];
+            tmpMove += rowNames[moveHistory[h][1][s][0][1]];
+            //for (var p=0; p<moveHistory[h][1][s][1].length; p++) {
+            //  tmpMove += moveHistory[h][1][s][1][p].color;
+            //  tmpMove += shortSizeNames[moveHistory[h][1][s][1][p].size];
+            //  tmpMove += "+";
+            //}
+            //tmpMove = tmpMove.slice(0,-1);
+            tmpMove += ">";
+            tmpMove += colNames[moveHistory[h][1][s][2][0]];
+            tmpMove += rowNames[moveHistory[h][1][s][2][1]];
+            //tmpMove += "|";
+          }
+          //tmpMove = tmpMove.slice(0,-1);
+        } else if (moveHistory[h][0] == "swap") {
+          tmpMove += "W-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          //for (var p=0; p<moveHistory[h][2].length; p++) {
+          //  tmpMove += moveHistory[h][2][p].color;
+          //  tmpMove += shortSizeNames[moveHistory[h][2][p].size];
+          //  tmpMove += "+";
+          //}
+          //tmpMove = tmpMove.slice(0,-1);
+          tmpMove += ">";
+          tmpMove += colNames[moveHistory[h][3][0]];
+          tmpMove += rowNames[moveHistory[h][3][1]];
+        }
+        readable += tmpMove + ", ";
+      }
+      readable = readable.slice(0,-2);
+      return(readable);
+    }
+    
+    /*
+    function ExportHistory() {
+      moveHistory.push({"seed": seed});
+      var tmpString = JSON.stringify(moveHistory);
+      var tmpCompressed = zip_encode(tmpString);
+      moveHistory.pop();
+      return(tmpCompressed);
+    }
+    
+    function ImportHistory(hist) {
+      var tmpDecompressed = zip_decode(hist);
+      var tmpParsed = JSON.parse(tmpDecompressed);
+      return(tmpParsed);
+    }
+    
+    function PlaybackHistory(data) {
+      var tmpHistory = ImportHistory(data);
+      var tmpSeed = tmpHistory.pop().seed;
+      console.log(tmpHistory);
+      console.log(tmpSeed);
+      for (var h=0; h<tmpHistory.length; h++) {
+        if (tmpHistory[h][0] == "move" || tmpHistory[h][0] == "top" || tmpHistory[h][0] == "bank") {
+          for (var p=0; p<tmpHistory[h][2].length; p++) {
+            tmpHistory[h][2][p].bank = false;
+          }
+        } else if (tmpHistory[h][0] == "slide") {
+          for (var s=0; s<tmpHistory[h][1].length; s++) {
+            for (var p=0; p<tmpHistory[h][1][0][1].length; p++) {
+              tmpHistory[h][1][0][1][p].bank = false;
+            }
+          }
+        } else if (tmpHistory[h][0] == "swap") {
+          
+        }
+      }
+      NewGame(tmpSeed);
+      moveHistory = tmpHistory;
+      historyPosition = 0;
+      record = false;
+    } */
+    
+    function PlaybackHistory(data) {
+      var tmpSeed = data.slice(0, data.indexOf("_"));
+      recordedHistory = data.slice(data.indexOf("_")+1).split(", ");
+      NewGame(tmpSeed);
+      historyPosition = 0;
+      //record = false;
+    }
+    
+    /*
+    function HistoryStepForward() {
+      if (moveHistory[historyPosition] !== undefined) {
+        var tmpStep = moveHistory[historyPosition];
+        if (tmpStep[0] == "move" || tmpStep[0] == "top") {
+          selectedCell = [tmpStep[1][0], tmpStep[1][1]];
+          MovePyramid(tmpStep[3][0], tmpStep[3][1]);
+        } else if (tmpStep[0] == "slide") {
+          selectedCell = [tmpStep[1][0][0][0], tmpStep[1][0][0][1]];
+          MovePyramid(tmpStep[1][0][2][0], tmpStep[1][0][2][1]);
+        } else if (tmpStep[0] == "bank") {
+          selectedCell = [tmpStep[1][0], tmpStep[1][1]];
+          FullTreeSelected(tmpStep[1][0], tmpStep[1][1], 2);
+        } else if (tmpStep[0] == "swap") {
+          swap1 = [tmpStep[1][0], tmpStep[1][1]];
+          SwapPyramids(tmpStep[3][0], tmpStep[3][1]);
+        }
+        historyPosition++;
+      } else {
+        console.log("End of History");
+      }
+    } */
+    
+    function HistoryStepForward() {
+      if (recordedHistory[historyPosition] !== undefined) {
+        var tmpStep = recordedHistory[historyPosition];
+        if (tmpStep[0] == "M" || tmpStep[0] == "T") {
+          var tmpMove = tmpStep.slice(2).split(">");
+          var oldCol = colNames.indexOf(tmpMove[0][0]);
+          var oldRow = rowNames.indexOf(Number(tmpMove[0].slice(1)));
+          var tarCol = colNames.indexOf(tmpMove[1][0]);
+          var tarRow = rowNames.indexOf(Number(tmpMove[1].slice(1)));
+          selectedCell = [oldCol, oldRow];
+          MovePyramid(tarCol, tarRow);
+        } else if (tmpStep[0] == "S") {
+          var tmpMove = tmpStep.slice(2).split(">");
+          var oldCol = colNames.indexOf(tmpMove[0][0]);
+          var oldRow = rowNames.indexOf(Number(tmpMove[0].slice(1)));
+          var tarCol = colNames.indexOf(tmpMove[1][0]);
+          var tarRow = rowNames.indexOf(Number(tmpMove[1].slice(1)));
+          selectedCell = [oldCol, oldRow];
+          MovePyramid(tarCol, tarRow);
+        } else if (tmpStep[0] == "B") {
+          var tarCol = colNames.indexOf(tmpStep[2]);
+          var tarRow = rowNames.indexOf(Number(tmpStep.slice(3)));
+          selectedCell = [tarCol, tarRow];
+          FullTreeSelected(tarCol, tarRow, 2);
+        } else if (tmpStep[0] == "W") {
+          var tmpMove = tmpStep.slice(2).split(">");
+          var oldCol = colNames.indexOf(tmpMove[0][0]);
+          var oldRow = rowNames.indexOf(Number(tmpMove[0].slice(1)));
+          var tarCol = colNames.indexOf(tmpMove[1][0]);
+          var tarRow = rowNames.indexOf(Number(tmpMove[1].slice(1)));
+          swap1 = [oldCol, oldRow];
+          SwapPyramids(tarCol, tarRow);
+        }
+        historyPosition++;
+        if (playing) {
+          var tmpDelay = (moveSpeed*1000)+500;
+          histPlayTimeout = setTimeout(() => {
+            HistoryStepForward();
+          }, tmpDelay);
+        }
+      } else {
+        console.log("End of History");
+      }
+    }
+    
+    function HistoryStepBackward() {
+      if (historyPosition > 0) {
+        UndoLast();
+        historyPosition--;
+        if (playing) {
+          var tmpDelay = (moveSpeed*1000)+500;
+          histPlayTimeout = setTimeout(() => {
+            HistoryStepBackward();
+          }, tmpDelay);
+        }
+      } else {
+        console.log("Beginning of History");
+      }
+    }
+    
+    function HistoryPlay() {
+      playing = true;
+      clearTimeout(histPlayTimeout);
+      HistoryStepForward();
+    }
+    
+    function HistoryRewind() {
+      playing = true;
+      clearTimeout(histPlayTimeout);
+      HistoryStepBackward();
+    }
+    
+    function HistoryPause() {
+      playing = false;
+      clearTimeout(histPlayTimeout);
+    }
+    
+    function HistorySpeed(speed=1.0) {
+      moveSpeed = speed;
+      adjustCSSRules('.move-slow', 'transition: all '+speed+'s');
+    }
+    
+    /*
+    function HistoryStepBackward() {
+      if (historyPosition > 0) {
+        UndoLast(historyPosition-1);
+        historyPosition--;
+      } else {
+        console.log("Beginning of History");
+      }
+    }
+    
+    
+    //https://stackoverflow.com/questions/53310514/is-there-a-way-to-compress-a-long-string-to-a-smaller-one-and-vise-versa-by-code
+    function zip_encode(str) {
+      const ascii = encodeURIComponent(str)
+      const array = new TextEncoder().encode(ascii)
+      const zip = fflate.deflateSync(array, {level: 9})
+      return window.btoa(String.fromCharCode(...zip))
+    }
+
+    function zip_decode(base64) {
+      const raw = window.atob(base64)
+      const array = Uint8Array.from(raw, c => c.charCodeAt(0))
+      const unzip = fflate.inflateSync(array)
+      const ascii = new TextDecoder().decode(unzip)
+      return decodeURIComponent(ascii)
+    } */
+    
     function enterKeySeed(e) {
         //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
         if (e.keyCode == 13) {
@@ -1532,11 +2155,13 @@
     SetBoardColors(4);
     SetPyramidColors(1);
     DrawTable();
+    document.getElementById('stashSelector').value=1;
+    document.getElementById('backgroundSelector').value=4;
+    
+    //setDropdowns();
+    //makeDropdown();
+    
     setTimeout(() => {
-//      tmp.setAttribute("x", 150);
-//      tmp.setAttribute("y", 150);
-//      tmp2.setAttribute("x", 200);
-//      tmp2.setAttribute("y", 50);
         InitialPiecesOnBoard();
     }, 500);
 
