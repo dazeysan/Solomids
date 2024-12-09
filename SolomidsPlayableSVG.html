@@ -3,7 +3,7 @@
 <head>
   <title>SVG Test</title>
   
-  <script src="fflate0.8.2.js"></script>
+  <!-- <script src="fflate0.8.2.js"></script> -->
   
   <script>
     // Copyright for the random seed code:
@@ -505,11 +505,11 @@
       <svg id="table" xmlns="http://www.w3.org/2000/svg" width="250" height="500" viewBox="0 0 250 500">
       <rect width="100%" height="100%" fill="#aaaaaa" />
         <symbol id="Pawn-icon" viewBox="-5 -5 147.6 178.9">
-          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M137.1,159.8L74.9,4.2c-1-2.5-3.4-4.2-6.2-4.2s-5.2,1.6-6.2,4.2L.5,159.8c-.8,2-.6,4.4.7,6.2,1.2,1.8,3.3,2.9,5.5,2.9h124.3c2.2,0,4.3-1.1,5.5-2.9,1.2-1.8,1.5-4.1.7-6.2h0Z"/>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M137.1,159.8L74.9,4.2c-1-2.5-3.4-4.2-6.2-4.2s-5.2,1.6-6.2,4.2L.5,159.8c-.8,2-.6,4.4.7,6.2,1.2,1.8,3.3,2.9,5.5,2.9h124.3c2.2,0,4.3-1.1,5.5-2.9,1.2-1.8,1.5-4.1.7-6.2h0Z"/>
           <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M79.1,133.8c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
         </symbol>
         <symbol id="Drone-icon" viewBox="-5 -5 188.8 242.1">
-          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M178.4,223.1L95.6,4.3c-1-2.6-3.4-4.3-6.2-4.3s-5.2,1.7-6.2,4.3L.4,223.1c-.8,2-.5,4.3.7,6.1,1.2,1.8,3.3,2.9,5.5,2.9h165.6c2.2,0,4.2-1.1,5.5-2.9,1.2-1.8,1.5-4.1.8-6.1h0Z"/>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M178.4,223.1L95.6,4.3c-1-2.6-3.4-4.3-6.2-4.3s-5.2,1.7-6.2,4.3L.4,223.1c-.8,2-.5,4.3.7,6.1,1.2,1.8,3.3,2.9,5.5,2.9h165.6c2.2,0,4.2-1.1,5.5-2.9,1.2-1.8,1.5-4.1.8-6.1h0Z"/>
           <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M53.4,207.9c-6,0-10.9-4.9-10.9-10.9,0-.3,0-.7,0-1h0s0,0,0-.1c.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.4,0,.7,0,1,0,6-4.9,10.9-10.9,10.9ZM94,197c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0s0,0,0,0c6,0,10.9-4.9,10.9-10.9Z"/>
         </symbol>
         <symbol id="Queen-icon" viewBox="-5 -5 242.2 283.1">
@@ -537,14 +537,15 @@
         <button type="button" onClick="javascript:{HistoryPlay();};" >Play</button>
         <button type="button" onClick="javascript:{HistoryPause();};" >Pause</button>
         <button type="button" onClick="javascript:{HistoryRewind();};" >Rewind</button>
-        <button type="button" onClick="javascript:{HistorySpeed(1.0);};" >1x</button>
-        <button type="button" onClick="javascript:{HistorySpeed(0.5);};" >2x</button>
+        <button type="button" onClick="javascript:{SetMoveSpeed(1.0);};" >1x</button>
+        <button type="button" onClick="javascript:{SetMoveSpeed(0.5);};" >2x</button>
         
       </div>
     </div>
 
   </div>
 
+  <div id="testtest"><a id="download" download="image.png"><button type="button" onClick="download()">Download Image</button></a></div>
 
   <script>
     
@@ -608,7 +609,7 @@
     var swapsUsed = 0;
 
     var moveHistory = [];
-    var moveHist = [];
+    var moveHistory2 = [];
     var historyPosition = 0;
     var record = true;
     var recordedHistory = "";
@@ -764,17 +765,22 @@
       var tmpPos2 = [swap1[0], swap1[1]];
       if (record) {
         moveHistory.push(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]]);
+        moveHistory2.push(JSON.parse(JSON.stringify(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]])));
       }
       //moveHist.push(["w", [col,row], tmpPos2]);
       cells[col][row] = cells[swap1[0]][swap1[1]];
       for (var o=0; o<cells[col][row].length; o++) {
-        cells[col][row][o].col = col;
-        cells[col][row][o].row = row;
+        //cells[col][row][o].col = col;
+        piecesWithIds[cells[col][row][o]].col = col;
+        //cells[col][row][o].row = row;
+        piecesWithIds[cells[col][row][o]].row = row;
       }
       cells[swap1[0]][swap1[1]] = tmpSwap;
       for (var n=0; n<cells[swap1[0]][swap1[1]].length; n++) {
-        cells[swap1[0]][swap1[1]][n].col = swap1[0];
-        cells[swap1[0]][swap1[1]][n].row = swap1[1];
+        //cells[swap1[0]][swap1[1]][n].col = swap1[0];
+        piecesWithIds[cells[swap1[0]][swap1[1]][n]].col = swap1[0];
+        //cells[swap1[0]][swap1[1]][n].row = swap1[1];
+        piecesWithIds[cells[swap1[0]][swap1[1]][n]].row = swap1[1];
       }
       document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
       document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
@@ -787,17 +793,21 @@
     }
     
     function FullTreeSelected(col, row, type) {
+      // A full tree was clicked, are we banking it?
       console.log("FullTreeSelected("+col+", "+row+", "+type+")");
       if (type == 2 && selectedCell[0] != -1) {
-        //Tree was double-clicked
+        // Tree was double-clicked
+        // Not using double-click anymore, but keeping the logic the same
         console.log("Bank that tree!");
         var tmpPos = (row * boardWidth)+col;
         for (var p=0; p<cells[col][row].length; p++) {
-          cells[col][row][p].bank = true;
+          //cells[col][row][p].bank = true;
+          piecesWithIds[cells[col][row][p]].bank = true;
         }
         bank.push(cells[col][row]);
         if (record) {
           moveHistory.push(["bank", [col,row], cells[col][row]]);
+          moveHistory2.push(JSON.parse(JSON.stringify(["bank", [col,row], cells[col][row]])));
         }
         //moveHist.push(["b", tmpPos, Number(cells[col][row][0].toString()[0])]);
         cells[col][row] = [];
@@ -810,25 +820,23 @@
     }
     
     function DrawTable() {
+      // Adds the various SVGs to the "table"(svg)
       var tmpWidth = (boardWidth * cellWidth)*2;
       var tmpHeight = boardHeight * cellHeight;
       svg.setAttribute("width", tmpWidth);
       svg.setAttribute("height", tmpHeight);
       svg.setAttribute("viewBox", "0 0 "+tmpWidth+" "+tmpHeight);
-      //svg.innerHTML = "";
-      var fill;
       
-      //Draw the Tableau
+      // Draw the Tableau on the right
       var tRect = document.createElementNS(svgns, "rect");
-      fill = "#bbb";
       tRect.setAttribute("x", 0);
       tRect.setAttribute("y", 0);
       tRect.setAttribute("width", tmpWidth);
       tRect.setAttribute("height", tmpHeight);
-      tRect.setAttribute("fill", fill);
+      tRect.setAttribute("fill", "#bbb");
       tableau.appendChild(tRect);
       
-      //Draw the Score
+      // Draw the Score Field
       var sText = document.createElementNS(svgns, "text");
       sText.id = "score-text";
       sText.setAttribute("x", 270);
@@ -839,16 +847,15 @@
       sText.innerHTML = "Score: 0";
       tableau.appendChild(sText);
       
-      //Draw the Hollow Bank Trees
-      //var tmpSize = pieceSizes[3];
+      // Draw the Hollow Bank Trees
       var tmpSize = cellHeight;
       for (c=0; c<5; c++) {
         for (r=0; r<3; r++) {
-          addShape2(tableau, "Hollow-Tree-icon", "testTree", (260+(c*tmpSize*.5)), (tmpSize*r)+30, tmpSize, tmpSize, "hollow-style"+(c+1));
+          AddSVG(tableau, "Hollow-Tree-icon", "testTree", (260+(c*tmpSize*.5)), (tmpSize*r)+30, tmpSize, tmpSize, "hollow-style"+(c+1));
         }
       }
       
-      //Draw the Swap buttons
+      // Draw the Swap buttons
       var s1Rect = document.createElementNS(svgns, "rect");
       s1Rect.id = "SwapButton1Background";
       s1Rect.setAttribute("x", 410);
@@ -859,7 +866,7 @@
       s1Rect.setAttribute("fill", "#ffffff");
       s1Rect.setAttribute("stroke", "#000000");
       tableau.appendChild(s1Rect);
-      addShape2(tableau, "Swap-icon", "SwapButton1", 415, 45, 30, 30, "swap-icon-unavailable");
+      AddSVG(tableau, "Swap-icon", "SwapButton1", 415, 45, 30, 30, "swap-icon-unavailable");
       var s1cRect = document.createElementNS(svgns, "rect");
       s1cRect.id = "SwapButton1Click";
       s1cRect.setAttribute("x", 410);
@@ -885,7 +892,7 @@
       s1Rect.setAttribute("fill", "#ffffff");
       s1Rect.setAttribute("stroke", "#000000");
       tableau.appendChild(s1Rect);
-      addShape2(tableau, "Swap-icon", "SwapButton2", 415, 95, 30, 30, "swap-icon-unavailable");
+      AddSVG(tableau, "Swap-icon", "SwapButton2", 415, 95, 30, 30, "swap-icon-unavailable");
       var s1cRect = document.createElementNS(svgns, "rect");
       s1cRect.id = "SwapButton2Click";
       s1cRect.setAttribute("x", 410);
@@ -901,7 +908,7 @@
       }, false);
       tableau.appendChild(s1cRect);
       
-      //Draw the Bank button
+      // Draw the Bank button
       var bRect = document.createElementNS(svgns, "rect");
       bRect.setAttribute("x", 270);
       bRect.setAttribute("y", 200);
@@ -932,7 +939,7 @@
       }, false);
       tableau.appendChild(cRect);
       
-      //Draw the Undo button
+      // Draw the Undo button
       var bRect2 = document.createElementNS(svgns, "rect");
       bRect2.setAttribute("x", 370);
       bRect2.setAttribute("y", 200);
@@ -963,7 +970,7 @@
       }, false);
       tableau.appendChild(bRect2);
       
-      //Draw the Moves count
+      // Draw the Moves count
       var mText = document.createElementNS(svgns, "text");
       mText.id = "moves-text";
       mText.setAttribute("x", 270);
@@ -974,7 +981,7 @@
       mText.innerHTML = "Moves: 0";
       tableau.appendChild(mText);
       
-      //Draw the History button
+      // Draw the History button
       var bRect2 = document.createElementNS(svgns, "rect");
       bRect2.setAttribute("x", 400);
       bRect2.setAttribute("y", 460);
@@ -1005,8 +1012,9 @@
       }, false);
       tableau.appendChild(bRect2);
       
-      
-      //Draw the Board Squares
+      // Draw the Board Squares with alternating colors
+      // I don't think this works with an odd number of columns
+      var fill;
       for (row=0; row<boardHeight; row++) {
         for (col=0; col<boardWidth; col++) {
           if ((col+row)%2) {
@@ -1025,10 +1033,9 @@
       }
     }
     
-    
-
     //https://stackoverflow.com/questions/6620393/is-it-possible-to-alter-a-css-stylesheet-using-javascript-not-the-style-of-an
     function adjustCSSRules(selector, props, sheets){
+      // Replaces the value in a stylesheet
       // get stylesheet(s)
       if (!sheets) sheets = [...document.styleSheets];
       else if (sheets.sup){    // sheets is a string
@@ -1056,25 +1063,10 @@
         sheet.insertRule(`${selector} { ${props} }`, sheet.cssRules.length);
       }
     }
-  
-    
-//    function addShape(parent, shape, x, y) {
-//      var tmpSymbol = document.createElementNS(svgns, "g");
-//      tmpSymbol.id="Pawn-icon3";
-//      tmpSymbol.setAttribute("viewBox", shape.viewBox);
-//      tmpSymbol.setAttribute("x", "150");
-//      tmpSymbol.setAttribute("y", "150");
-//      //tmpSymbol.setAttribute("width", "50");
-//      //tmpSymbol.setAttribute("height", "50");
-//      var tmpPath = document.createElementNS(svgns, "path");
-//      tmpPath.setAttributeNS(null, "d", shape.d[0]);
-//      tmpPath.setAttribute("fill", "#5cceee");
-//      tmpSymbol.appendChild(tmpPath);
-//      parent.appendChild(tmpSymbol);
-//    }
-        
-    function addShape2(parent, shape, id, x, y, width, height, style) {
-      console.log("addShape2("+parent);
+   
+    function AddSVG(parent, shape, id, x, y, width, height, style) {
+      // Add a pre-defined SVG (shape) to the (parent) element
+      console.log("AddSVG("+parent);
       var tmpPath = document.createElementNS(svgns, "use");
       tmpPath.id = id;
       tmpPath.setAttribute("href", "#"+shape);
@@ -1088,13 +1080,6 @@
       tmpPath.classList.add("move-slow");
       parent.appendChild(tmpPath);
     }
-    
-    //addShape(svg, shape_pyramid_pawn, 10, 10);
-    
-    //addShape2(svg, "Pawn-icon", "testPawn", 10, 10, 30, 30, "style1");
-    //addShape2(svg, "Queen-icon", "testQueen", 50, 50, 50, 50, "style2");
-
-    
     
     function ShuffleBag() {
       var t0 = performance.now();
@@ -1211,7 +1196,8 @@
               piecesWithIds[key].row = Math.floor(p/boardWidth)+1;
               piecesWithIds[key].elev = 0;
               tmpBag[p][0] = null;
-              cells[piecesWithIds[key].col][piecesWithIds[key].row] = [piecesWithIds[key]];
+              //cells[piecesWithIds[key].col][piecesWithIds[key].row] = [piecesWithIds[key]];
+              cells[piecesWithIds[key].col][piecesWithIds[key].row] = [key];
               break;
             }
           }
@@ -1293,32 +1279,31 @@
         adjustCSSRules('.icon-two-part.style'+r, '--color-4: '+tmpPipStroke);
         adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-4: '+tmpPipStroke);
       }
-      //DrawTable();
     }
     
     function SetBoardColors(pallete) {
       if (pallete == "custom") {
         document.getElementById("customBoardColorPickerDiv").style.display="";
         if (customBoardColor.length == 0) {
+          // No custom color has been specified, use the default
           document.getElementById("customBoardColorPicker0").value=fillColors[0];
           document.getElementById("customBoardColorPicker1").value=fillColors[1];
         } else {
+          // A custom color was specified, use it.
           document.getElementById("customBoardColorPicker0").value=customBoardColor[0];
           document.getElementById("customBoardColorPicker1").value=customBoardColor[1];
           fillColors=[...customBoardColor];
         }
       } else {
+        // Not using custom colors, use the spcified color pallete
         document.getElementById("customBoardColorPickerDiv").style.display="none";
         fillColors = [...boardColors[pallete]];
-        //SetBoardColors(pallete);
       }
-      
-      //fillColors=[...boardColors[pallete]];
       console.log("SetBoardColors("+pallete+") - "+fillColors[2]);
-      //DrawTable();
     }
     
     function AddCellHighlight(col, row) {
+      // Highlight a cell
       console.log("AddCellHighlight()");
       var hRect = document.createElementNS(svgns, "rect");
       hRect.id = "cellHighlight";
@@ -1335,11 +1320,13 @@
     }
 
     function SetCellHighlight(col, row) {
+      // Clear the cell highlighting and highlight a specific cell
       ClearCellHighlights();
       AddCellHighlight(col, row);
     }
 
     function ClearCellHighlights() {
+      // Clear all highlighting of cells on the board
       var tmp = document.getElementById("cellHighlight");
       if (tmp !== null) {
         tmp.remove();
@@ -1347,6 +1334,7 @@
     }
     
     function MovePyramid(targetCol, targetRow) {
+      // Has most of the logic for checking if you can move a piece on the board.
       var targetPos = (targetRow * boardWidth)+targetCol;
       var oldCol = selectedCell[0];
       var oldRow = selectedCell[1];
@@ -1355,6 +1343,7 @@
       var tarCell = cells[targetCol][targetRow];
       console.log("MovePyramid: from: "+oldPos+" to: "+targetPos);
 
+      // Set the test variables to false, when a test passes it's set to true
       var colorsOK = false;
       var sizesOK = false;
       var topMove = false;
@@ -1406,7 +1395,8 @@
               tmpHist.push([[targetCol,r], cells[targetCol][r], [targetCol,r-slideDistance]]);
               cells[targetCol][r-slideDistance] = cells[targetCol][r];
               for (var n=0; n<cells[targetCol][r-slideDistance].length; n++) {
-                cells[targetCol][r-slideDistance][n].row = r-slideDistance;
+                //cells[targetCol][r-slideDistance][n].row = r-slideDistance;
+                piecesWithIds[cells[targetCol][r-slideDistance][n]].row = r-slideDistance;
               }
               cells[targetCol][r] = [];
             } else {
@@ -1415,6 +1405,7 @@
           }
           if (record) {
             moveHistory.push(["slide", tmpHist]);
+            moveHistory2.push(JSON.parse(JSON.stringify(["slide", tmpHist])));
           }
           //moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
           UpdatePiecesOnBoard();
@@ -1424,12 +1415,12 @@
         }
       } else {
         //There is something in the target cell, let's check if we can stack on it
-        if (oldCell[0].color == tarCell[0].color) {
+        if (piecesWithIds[oldCell[0]].color == piecesWithIds[tarCell[0]].color) {
           //The colors of the old and target pieces match
           console.log("Colors Match");
           colorsOK = true;
         }
-        if (oldCell[0].size+1 == tarCell[tarCell.length-1].size) {
+        if (piecesWithIds[oldCell[0]].size+1 == piecesWithIds[tarCell[tarCell.length-1]].size) {
           //The size of the old piece is 1 smaller than the top target piece
           console.log("Old piece is 1 smaller than target piece");
           sizesOK = true;
@@ -1439,7 +1430,7 @@
             console.log("Old stack has more than 1 piece");
             for (p=1; p<oldCell.length; p++) {
               console.log(p);
-              if (oldCell[p].size+1 == tarCell[tarCell.length-1].size) {
+              if (piecesWithIds[oldCell[p]].size+1 == piecesWithIds[tarCell[tarCell.length-1]].size) {
                 console.log("We can do a topMove");
                 topMove = true;
                 topMoveElev = p;
@@ -1518,15 +1509,18 @@
             console.log("Move that Piece(s)!");
             if (record) {
               moveHistory.push(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]]);
+              moveHistory2.push(JSON.parse(JSON.stringify(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]])));
             }
             //moveHist.push(["m", oldPos, targetPos]);
             for (o=0; o<oldCell.length; o++) {
-              cells[oldCol][oldRow][o].col = tarCell[0].col;
-              cells[oldCol][oldRow][o].row = tarCell[0].row;
+              //cells[oldCol][oldRow][o].col = tarCell[0].col;
+              piecesWithIds[cells[oldCol][oldRow][o]].col = piecesWithIds[tarCell[0]].col;
+              //cells[oldCol][oldRow][o].row = tarCell[0].row;
+              piecesWithIds[cells[oldCol][oldRow][o]].row = piecesWithIds[tarCell[0]].row;
             }
             cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(cells[oldCol][oldRow]);
             for (var e=0; e<cells[targetCol][targetRow].length; e++) {
-              cells[targetCol][targetRow][e].elev=e;
+              piecesWithIds[cells[targetCol][targetRow][e]].elev=e;
             }
             cells[oldCol][oldRow] = [];
           } else if (!sizesOK && topMove) {
@@ -1535,6 +1529,7 @@
             console.log(tmpStack);
             if (record) {
               moveHistory.push(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]]);
+              moveHistory2.push(JSON.parse(JSON.stringify(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]])));
             }
             //moveHist.push(["t", oldPos, targetPos]);
             //for (t=0; t<tmpStack.length; t++) {
@@ -1544,12 +1539,11 @@
             cells[oldCol][oldRow] = cells[oldCol][oldRow].splice(0,topMoveElev);
             cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(tmpStack);                       
             for (var e=0; e<cells[targetCol][targetRow].length; e++) {
-              cells[targetCol][targetRow][e].elev=e;
-              cells[targetCol][targetRow][e].col=targetCol;
-              cells[targetCol][targetRow][e].row=targetRow;
+              piecesWithIds[cells[targetCol][targetRow][e]].elev=e;
+              piecesWithIds[cells[targetCol][targetRow][e]].col=targetCol;
+              piecesWithIds[cells[targetCol][targetRow][e]].row=targetRow;
             }
           }
-          //DisplayPieces();
           UpdatePiecesOnBoard();
           ClearCellHighlights();
           selectedCell = [-1, -1];
@@ -1565,6 +1559,7 @@
     }
     
     function InitialPiecesOnBoard() {
+      // Loop through the bag and add the pieces to the board, should only run once
       var t0 = performance.now();
       var tmpParents = [null, pawns, drones, queens];
       for (p=0; p<bag.length; p++) {
@@ -1578,7 +1573,7 @@
           var tmpSize = pieceSizes[bag[p].toString()[1]];
           var tmpStyle = "style"+bag[p].toString()[0];
           var tmpParent = tmpParents[bag[p].toString()[1]];
-          addShape2(tmpParent, tmpShape, tmpId, tmpX, tmpY, tmpSize, tmpSize, tmpStyle);
+          AddSVG(tmpParent, tmpShape, tmpId, tmpX, tmpY, tmpSize, tmpSize, tmpStyle);
           piecesWithIds[tmpId] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
           //cells[tmpCol][tmpRow] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
         }
@@ -1588,11 +1583,13 @@
     }
     
     function UpdatePiecesOnBoard() {
+      // Update the X&Y values for the pieces based on where they are and how they're stacked.
       var t0 = performance.now();
       for (var key in piecesWithIds) {
         if (piecesWithIds.hasOwnProperty(key)) {
           if (!piecesWithIds[key].bank) {
             var tmpX = (piecesWithIds[key].col*cellWidth)+((cellWidth-pieceSizes[piecesWithIds[key].size])/2);
+            //var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10+((cells[piecesWithIds[key].col][piecesWithIds[key].row].length-1)*3);
             var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10+((cells[piecesWithIds[key].col][piecesWithIds[key].row].length-1)*3);
             var tmpPiece = document.getElementById(key);
             tmpPiece.setAttribute("x", tmpX);
@@ -1622,22 +1619,21 @@
       var tmpSwap2 = false;
       var tmpHtml = "Score: "+score+"<br/>";
       for (b=0; b<bank.length; b++) {
-        var tmpColorNum = bank[b][0].color;
+        var tmpColorNum = piecesWithIds[bank[b][0]].color;
         tmpGrid[tmpColorNum]++;
-        
         var bOffsetX = [null, 5, 2, 0];
         var bOffsetY = [null, -14, -8, 0];
         var bX = 270;
         var bY = 50;
         var bSize = [null, 20, 26, 30];
         for (var p=0; p<bank[b].length; p++) {
-          tmpPiece = document.getElementById(bank[b][p].id);
-          tmpX = bX+((bank[b][p].color-1)*25)+bOffsetX[bank[b][p].size];
-          tmpY = bY+((tmpGrid[bank[b][p].color]-1)*50)+bOffsetY[bank[b][p].size];
+          tmpPiece = document.getElementById(piecesWithIds[bank[b][p]].id);
+          tmpX = bX+((piecesWithIds[bank[b][p]].color-1)*25)+bOffsetX[piecesWithIds[bank[b][p]].size];
+          tmpY = bY+((tmpGrid[piecesWithIds[bank[b][p]].color]-1)*50)+bOffsetY[piecesWithIds[bank[b][p]].size];
           tmpPiece.setAttribute("x", tmpX);
           tmpPiece.setAttribute("y", tmpY);
-          tmpPiece.setAttribute("width", bSize[bank[b][p].size]);
-          tmpPiece.setAttribute("height", bSize[bank[b][p].size]);
+          tmpPiece.setAttribute("width", bSize[piecesWithIds[bank[b][p]].size]);
+          tmpPiece.setAttribute("height", bSize[piecesWithIds[bank[b][p]].size]);
           //queens w&h: 30
           //Color1 Queen: x:270 y:50  Add y50 for 2nd and 3rd rows
           //Color5 Queen: x:370 y:50
@@ -1655,36 +1651,22 @@
         tmpSwap2 = true;
       }
       for (var s=1; s<=3; s++) {
-        //for (var c=1; c<=5; c++) {
-        //  var tmpColor = pyramidColors[c];
-        //  if (tmpGrid[c] >= s) {
-        //    tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue9a0</span>";
-        //  } else {
-        //    tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue95f</span>";
-        //  }
-        //}
         var s1 = document.getElementById("SwapButton1");
         var s2 = document.getElementById("SwapButton2");
         var s1c = document.getElementById("SwapButton1Click");
         var s2c = document.getElementById("SwapButton2Click");
         if (s == 1) {
           if (tmpSwap1 && swapsUsed < 1) {
-            //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-            //tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
             s1.classList.add("swap-icon-available");
             s1.classList.remove("swap-icon-unavailable");
             s1.classList.remove("swap-icon-used");
             s1c.style.display="block";
           } else if (tmpSwap1 && swapsUsed >= 1) {
-            //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
             s1.classList.remove("swap-icon-available");
             s1.classList.remove("swap-icon-unavailable");
             s1.classList.add("swap-icon-used");
             s1c.style.display="none";
           } else {
-            //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
             s1.classList.remove("swap-icon-available");
             s1.classList.add("swap-icon-unavailable");
             s1.classList.remove("swap-icon-used");
@@ -1692,31 +1674,23 @@
           }
         } else if (s == 2) {
           if (tmpSwap2 && swapsUsed < 2) {
-            //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-            //tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
             s2.classList.add("swap-icon-available");
             s2.classList.remove("swap-icon-unavailable");
             s2.classList.remove("swap-icon-used");
             s2c.style.display="block";
           } else if (tmpSwap2 && swapsUsed >= 2) {
-            //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
             s2.classList.remove("swap-icon-available");
             s2.classList.remove("swap-icon-unavailable");
             s2.classList.add("swap-icon-used");
             s2c.style.display="none";
           } else {
-            //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-            //tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
             s2.classList.remove("swap-icon-available");
             s2.classList.add("swap-icon-unavailable");
             s2.classList.remove("swap-icon-used");
             s2c.style.display="none";
           }
         }
-        //tmpHtml += "<br/>";
       }
-      //document.getElementById("bank").innerHTML = tmpHtml;
     }
 
     function StartSwap(btn) {
@@ -1739,11 +1713,7 @@
         }, 200);
       }
     }
-    
-    
-//    tmp = document.getElementById("testPawn");
-//    tmp2 = document.getElementById("testQueen")
-    
+   
     function NewGame(seeder=null, type=null) {
       if (seeder !== null) {
         console.log("seeder not null");
@@ -1783,19 +1753,23 @@
       console.log("UpdateCellValues("+col+", "+row+")");
       //Just set the col, row, and elev attributes of the piece to match where it is
       for (var p=0; p<cells[col][row].length; p++) {
-        cells[col][row][p].col = col;
-        cells[col][row][p].row = row;
-        cells[col][row][p].elev = p;
-        piecesWithIds[cells[col][row][p].id].col = col;
-        piecesWithIds[cells[col][row][p].id].row = row;
-        piecesWithIds[cells[col][row][p].id].elev = p;
-        console.log(piecesWithIds[cells[col][row][p].id]);
+        //cells[col][row][p].col = col;
+        //cells[col][row][p].row = row;
+        //cells[col][row][p].elev = p;
+        //piecesWithIds[cells[col][row][p].id].col = col;
+        //piecesWithIds[cells[col][row][p].id].row = row;
+        //piecesWithIds[cells[col][row][p].id].elev = p;
+        piecesWithIds[cells[col][row][p]].col = col;
+        piecesWithIds[cells[col][row][p]].row = row;
+        piecesWithIds[cells[col][row][p]].elev = p;
+        console.log(piecesWithIds[cells[col][row][p]].id);
         if (full) {
-          cells[col][row][p].bank = false;
-          piecesWithIds[cells[col][row][p].id].bank = false;
-          var tmpPiece = document.getElementById(cells[col][row][p].id);
-          tmpPiece.setAttribute("width", pieceSizes[cells[col][row][p].size]);
-          tmpPiece.setAttribute("height", pieceSizes[cells[col][row][p].size]);
+          //cells[col][row][p].bank = false;
+          piecesWithIds[cells[col][row][p]].bank = false;
+          //piecesWithIds[cells[col][row][p].id].bank = false;
+          var tmpPiece = document.getElementById(piecesWithIds[cells[col][row][p]].id);
+          tmpPiece.setAttribute("width", pieceSizes[piecesWithIds[cells[col][row][p]].size]);
+          tmpPiece.setAttribute("height", pieceSizes[piecesWithIds[cells[col][row][p]].size]);
         }
       } 
     }
@@ -1808,10 +1782,11 @@
       }
       var oldCol, oldRow, tarCol, tarRow, tmpPieces, oldPieces, tarPieces, tmpIndex;
       if (step === null) {
-        var tmpMove = moveHistory.pop();
+        var tmpMove = moveHistory2.pop();
+        moveHistory.pop();
         //moveHist.pop();
       } else {
-        var tmpMove = moveHistory[step];
+        var tmpMove = moveHistory2[step];
       }
       if (tmpMove[0] == "move" || tmpMove[0] == "top") {
         //moveHistory format: [ "move/top", [fromCol, fromRow], [pieces], [toCol, toRow] ]
@@ -2112,9 +2087,10 @@
       clearTimeout(histPlayTimeout);
     }
     
-    function HistorySpeed(speed=1.0) {
+    function SetMoveSpeed(speed=1.0) {
+      // Speed is seconds it takes for pieces to transition from point A to B
       moveSpeed = speed;
-      adjustCSSRules('.move-slow', 'transition: all '+speed+'s');
+      adjustCSSRules('.move-slow', 'transition: all '+moveSpeed+'s');
     }
     
     /*
@@ -2125,9 +2101,69 @@
       } else {
         console.log("Beginning of History");
       }
+    }*/
+    
+    function ScreenShot() {
+      // Doesn't work properly due to CSS stuff, but wanted to record the basic code
+      XML2 = new XMLSerializer().serializeToString(svg);
+      newsvg = btoa(unescape(encodeURIComponent(XML2)));
+      img2= new Image();
+      img2.height = 500;
+      img2.width = 500;
+      img2.src = 'data:image/svg+xml;base64,' + newsvg;
+      
+      // This might write it to a canvas to then be converted to PNG:
+      canv = document.createElement("canvas")
+      ctx = canv.getContext('2d');
+      ctx.drawImage(img2, 0, 0);
     }
     
+    function createStyleElementFromCSS() {
+      var sheet = document.styleSheets[0];
+      var styleRules = [];
+      for (var i = 0; i < sheet.cssRules.length; i++) {
+        styleRules.push(sheet.cssRules.item(i).cssText);
+      }
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      style.appendChild(document.createTextNode(styleRules.join(' ')))
+      return style;
+    };
+
+    function download() {
+      var style = createStyleElementFromCSS();
+      // fetch SVG-rendered image as a blob object
+      var svg2 = document.querySelector('svg');
+      // CSS must be explicitly embedded
+      svg2.insertBefore(style, svg2.firstChild);
+      var data = (new XMLSerializer()).serializeToString(svg2);
+      var newsvg = btoa(unescape(encodeURIComponent(data)));
+      style.remove(); // remove temporarily injected CSS
+      var img = new Image();
+      img.addEventListener('load', () => {
+        // draw the image on an ad-hoc canvas
+        var bbox = svg2.getBBox();
+        console.log(bbox);
+        var canvas = document.createElement('canvas');
+        canvas.width = "250";
+        canvas.height = bbox.height;
+        console.log(canvas);
+        var context = canvas.getContext('2d');
+        context.drawImage(img, 0, 0, bbox.width, bbox.height);
+        // trigger a synthetic download operation with a temporary link
+        var a = document.createElement('a');
+        a.download = seed+".png";
+        document.body.appendChild(a);
+        a.href = canvas.toDataURL("image/png")
+          .replace("image/png", "image/octet-stream");
+        a.click();
+        a.remove();
+      });
+      img.src = 'data:image/svg+xml;base64,' + newsvg;
+    };
     
+    
+    /*
     //https://stackoverflow.com/questions/53310514/is-there-a-way-to-compress-a-long-string-to-a-smaller-one-and-vise-versa-by-code
     function zip_encode(str) {
       const ascii = encodeURIComponent(str)
@@ -2144,29 +2180,28 @@
       return decodeURIComponent(ascii)
     } */
     
+    //Watching for the Enter key to be pressed in the seed text box.
     function enterKeySeed(e) {
-        //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
-        if (e.keyCode == 13) {
-            NewGame(null, "seed");
-            return false;
-        }
+      //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
+      if (e.keyCode == 13) {
+        NewGame(null, "seed");
+        return false;
+      }
     }    
     
+    // Basic setup that should be replaced with a check for saved settings.
     SetBoardColors(4);
     SetPyramidColors(1);
     DrawTable();
     document.getElementById('stashSelector').value=1;
     document.getElementById('backgroundSelector').value=4;
-    
-    //setDropdowns();
-    //makeDropdown();
-    
+ 
+    // Put the pieces on the board in an un-shuffled state
     setTimeout(() => {
         InitialPiecesOnBoard();
     }, 500);
-
-
-    
+   
+    // Start a new game either from a specified seed or randomly
     setTimeout(() => {
       if (urlParams.get("seed") !== null) {
         seed = urlParams.get("seed");
@@ -2177,10 +2212,6 @@
         NewGame(seed);
       }
     }, 1000);
-    
-    
-    //adjustCSSRules('.icon-two-part.style1', '--color-1: #ffff00');
-    //adjustCSSRules('.icon-two-part.style1', '--color-2: #ff0000');
     
   </script>
 </body>
