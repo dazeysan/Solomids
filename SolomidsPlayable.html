@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Solomids</title>
-
-<!-- Copyright 2023 dazeysan -->
-<!-- Still need to remove unused Ricochet Pyramids code -->
-
+  <title>Solomids - Playable</title>
+  
+  <!-- <script src="fflate0.8.2.js"></script> -->
+  
   <script>
     // Copyright for the random seed code:
     /*
@@ -262,1565 +261,1934 @@
   </script>
   
   <style>
-  @font-face {
-    font-family: 'PyramidLove';
-    src: url('Pyramid-Love-3.1.woff');
-  }
-  
-   /* The container must be positioned relative: */
-  .custom-select {
-    position: relative;
-    font-family: Arial;
-    border: 1px solid #000000
-  }
-
-  .custom-select select {
-    display: none; /*hide original SELECT element: */
-  }
-
-  .select-selected {
-    background-color: White;
-  }
-
-  /* Style the arrow inside the select element: */
-  .select-selected:after {
-    position: absolute;
-    content: "";
-    top: 14px;
-    right: 10px;
-    width: 0;
-    height: 0;
-    border: 6px solid transparent;
-    border-color: #000000 transparent transparent transparent;
-  }
-
-  /* Point the arrow upwards when the select box is open (active): */
-  .select-selected.select-arrow-active:after {
-    border-color: transparent transparent #fff transparent;
-    top: 7px;
-  }
-
-  /* style the items (options), including the selected item: */
-  .select-items div,.select-selected {
-    color: #000000;
-    padding: 8px 16px;
-    border: 1px solid transparent;
-    border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
-    cursor: pointer;
-  }
-
-  /* Style items (options): */
-  .select-items {
-    position: absolute;
-    background-color: White;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    border: 2px solid black;
-  }
-
-  /* Hide the items when the select box is closed: */
-  .select-hide {
-    display: none;
-  }
-
-  .select-items div:hover, .same-as-selected {
-    background-color: rgba(0, 0, 0, 0.1);
-  } 
+    /* Styling for multi-color svgs */
+    /* Note: most of this gets replaced by the config */
+    .icon-two-part.style1 {
+      --color-1: #ff0000;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style2 {
+      --color-1: #00ff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style3 {
+      --color-1: #0000ff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style4 {
+      --color-1: #ffff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
+    .icon-two-part.style5 {
+      --color-1: #00ffff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 10;
+      --stroke-2: 0;
+    }
     
-  /* Styling for multi-color svgs */
-  .icon-two-part.style1 {
-    --color-1: #ff0000;
-    --color-2: #000000;
-    --color-3: #000000;
-    --color-4: #ffffff;
-    --stroke-1: 10;
-    --stroke-2: 0;
-  }
+    .icon-two-part.hollow-style1 {
+      --color-1: #ff0000;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style2 {
+      --color-1: #00ff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 3;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style3 {
+      --color-1: #0000ff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style4 {
+      --color-1: #ffff00;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    .icon-two-part.hollow-style5 {
+      --color-1: #00ffff;
+      --color-2: #000000;
+      --color-3: #000000;
+      --color-4: #ffffff;
+      --stroke-1: 0;
+      --stroke-2: 0;
+    }
+    
+    .icon-two-part.swap-icon-available {
+      --color-1: #008000;
+    }
+    .icon-two-part.swap-icon-unavailable {
+      --color-1: #444444;
+    }
+    .icon-two-part.swap-icon-used {
+      --color-1: #ff0000;
+    }
+    
+    .move-slow {
+      transition: all 1.0s; 
+    }
+    
+    .swap-border-animated {
+      stroke-dasharray: 20;
+      animation: dash 1s infinite;
+      stroke: #00ff00;
+      stroke-width: 4px;
+      stroke-linecap: round;
+    }
+    @keyframes dash {
+      to {
+        stroke-dashoffset: 160;
+      }
+    }
+    
+    #board_div {
+      width:500px;
+      height:500px;
+      background:red;
+      border: 25px solid transparent;
+      border-image-slice: 27 27 27 27;
+      border-image-width: 25px 25px 25px 25px;
+      border-image-outset: 0px 0px 0px 0px;
+      border-image-repeat: stretch stretch;
+      border-image-source: url("Woodgrain3.png");
+    }
+    
+    .boardCellClass0 {
+      fill: #000000;
+    }
+    .boardCellClass1 {
+      fill: #ffffff;
+    }
+    
+    #settings_div {
+      max-height: 0;
+      transition: max-height 0.5s ease-out;
+      overflow: hidden;
+      background: #d5d5d5;
+      margin-left: 10px;
+    }
+
+    #settings_div.open {
+        max-height: 200px;
+        transition: max-height 0.5s ease-in;
+    }
+
+    #customStashColorPickerDiv {
+      display: grid;
+      grid-template-columns: auto auto auto auto auto;
+      /*background-color: #2196F3;*/
+      padding: 0px;
+    }
+
+    #customStashColorPickerDiv > * {
+      /*background-color: rgba(255, 255, 255, 0.8);*/
+      /*border: 1px solid rgba(0, 0, 0, 0.8);*/
+      /*padding: 20px;*/
+      font-size: 30px;
+      text-align: center;
+    }
+    
+    #historyBox {
+      position: absolute;
+      top: 250px;
+      left: 270px;
+      background: #ccc;
+      width: 215px;
+      height: 200px;
+      border: 2px solid;
+      border-radius: 5px;
+    }
+    
+    .playbackSteps {
+      
+    }
+    .playbackSteps.highlight {
+      background: lightgreen;
+      /*border-top: solid 2px red;*/
+    }
+    
+    .nostyle {
+      
+    }
+    
+    /* Disable double-tap */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+    
   </style>
-  
 </head>
 <body>
 
-<button type="button" onClick="Javascript:SeedGame();">Seeded Game</button>
-<input type="text" id="seedbox" onkeypress="return enterKeySeed(event)"></input>
-<button type="button" onClick="Javascript:NewGame();">Random Game</button>
-<br/>
-<br/>
-<div style="display: table;">
-  <div style="display: table-row;">
-    <div class="custom-select" style="width:200px; display: table-cell;">
-      <select id="stashSelector">
-        <option value="0">Select pyramid colors:</option>
-        <option value="1">Rainbow Stash</option>
-        <option value="2">Xeno Stash</option>
-        <option value="3">Test Stash</option>
-        <option value="custom">Custom</option>
-      </select>
+  <div style="">
+    <div id="controls_div" style="margin: 10px; width: 530px;">
+      <button type="button" onClick="Javascript:NewGame(null, 'seed');">Seeded Game</button>
+      <input type="text" id="seedbox" onkeypress="return enterKeySeed(event)" />
+      <button type="button" onClick="Javascript:NewGame(null, 'random');">Random Game</button>
+      <button type="button" onClick="Javascript:Settings('button');"style="float: right;">Settings</button>
     </div>
-    <div class="custom-select" style="width:200px; display: table-cell;">
-      <select id="backgroundSelector">
-        <option value="0">Select board colors:</option>
-        <option value="1">Black & White</option>
-        <option value="2">White & Black</option>
-        <option value="3">White & Light Blue</option>
-        <option value="4">Peach & Grey</option>
-        <option value="custom">Custom</option>
-      </select>
-    </div>
-  </div>
-  <div style="display: table-row;">
-    <div style="display: table-cell;">
-      <div id="customStashColorPickerDiv" style="display: none;">
-        <input type="color" id="customStashColorPicker1" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
-     --><input type="color" id="customStashColorPicker2" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
-     --><input type="color" id="customStashColorPicker3" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
-     --><input type="color" id="customStashColorPicker4" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
-     --><input type="color" id="customStashColorPicker5" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><br/><br/>
-        <!--<input type="button" value="Save custom stash" />-->
+    <div id="settings_div" style="width: 530px;">
+      <div id="settings_table" style="display: table;">
+        <div style="display: table-row;">
+          <div class="" style="width:200px; display: table-cell;">
+            <select id="stashSelector" onChange="SetPyramidColors(this.value);" style="width: 200px;">
+              <option value="0">Select pyramid colors:</option>
+              <option value="1">Rainbow Stash</option>
+              <option value="2">Xeno Stash</option>
+              <option value="3">Test Stash</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="" style="width:200px; display: table-cell;">
+            <select id="backgroundSelector" onChange="SetBoardColors(this.value);" style="width: 200px;">
+              <option value="0">Select board colors:</option>
+              <option value="1">Black & White</option>
+              <option value="2">White & Black</option>
+              <option value="3">White & Light Blue</option>
+              <option value="4">Peach & Grey</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: table-row;">
+          <div style="display: table-cell;">
+            <div id="customStashColorPickerDiv" style="display: none;">
+              <input type="color" id="customStashColorPicker1" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker2" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker3" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker4" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" /><!--
+           --><input type="color" id="customStashColorPicker5" onChange="javascript:{SetCustomStashColor();}" style="height: 40px;width: 40px;" />
+              <input type="checkbox" id="customStashPipColorPicker1" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker2" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker3" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker4" onChange="javascript:{SetCustomStashColor();}" /><!--
+           --><input type="checkbox" id="customStashPipColorPicker5" onChange="javascript:{SetCustomStashColor();}" />
+
+              <!--<input type="button" value="Save custom stash" />-->
+            </div>
+          </div>
+          <div style="display: table-cell;">
+            <div id="customBoardColorPickerDiv" style="display: none; text-align: center;">
+              <input type="color" id="customBoardColorPicker0" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" /><!--
+          --><input type="color" id="customBoardColorPicker1" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <div style="display: table-cell;">
-      <div id="customBoardColorPickerDiv" style="display: none; text-align: center;">
-        <input type="color" id="customBoardColorPicker0" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" /><!--
-    --><input type="color" id="customBoardColorPicker1" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" />
+    <div id="board_div" style="position: relative;">
+      <svg id="table" xmlns="http://www.w3.org/2000/svg" width="250" height="500" viewBox="0 0 250 500">
+      <rect width="100%" height="100%" fill="#aaaaaa" />
+        <symbol id="Pawn-icon" viewBox="-5 -5 147.6 178.9">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M137.1,159.8L74.9,4.2c-1-2.5-3.4-4.2-6.2-4.2s-5.2,1.6-6.2,4.2L.5,159.8c-.8,2-.6,4.4.7,6.2,1.2,1.8,3.3,2.9,5.5,2.9h124.3c2.2,0,4.3-1.1,5.5-2.9,1.2-1.8,1.5-4.1.7-6.2h0Z"/>
+          <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M79.1,133.8c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
+        </symbol>
+        <symbol id="Drone-icon" viewBox="-5 -5 188.8 242.1">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M178.4,223.1L95.6,4.3c-1-2.6-3.4-4.3-6.2-4.3s-5.2,1.7-6.2,4.3L.4,223.1c-.8,2-.5,4.3.7,6.1,1.2,1.8,3.3,2.9,5.5,2.9h165.6c2.2,0,4.2-1.1,5.5-2.9,1.2-1.8,1.5-4.1.8-6.1h0Z"/>
+          <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M53.4,207.9c-6,0-10.9-4.9-10.9-10.9,0-.3,0-.7,0-1h0s0,0,0-.1c.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.4,0,.7,0,1,0,6-4.9,10.9-10.9,10.9ZM94,197c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0s0,0,0,0c6,0,10.9-4.9,10.9-10.9Z"/>
+        </symbol>
+        <symbol id="Queen-icon" viewBox="-5 -5 242.2 283.1">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M231.7,263.9L122.2,4.1c-1-2.5-3.4-4.1-6.1-4.1s-5.1,1.6-6.1,4.1L.5,263.9c-.9,2.1-.6,4.4.6,6.2s3.3,3,5.5,3h219c2.2,0,4.3-1.1,5.5-3s1.5-4.2.6-6.2h0Z"/>
+          <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M83.4,248.9c-6,0-10.9-4.9-10.9-10.9s0-.7,0-1c0,0,0-.1,0-.1.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.3,0,.7,0,1h0c0,6-4.9,10.9-10.9,10.9ZM42.8,238c0,6,4.9,10.9,10.9,10.9s10.9-4.9,10.9-10.9,0-.6,0-1c0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1h0c0,.4,0,.7,0,1ZM124.1,238c0-.3,0-.6,0-1,0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
+        </symbol>
+        <symbol id="Hollow-Tree-icon" viewBox="0 0 252 512">
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M241.434 502.459l-47.996-113.912h15.048c2.256 0 4.373-1.101 5.653-2.959 1.294-1.858 1.572-4.233 0.769-6.336l-41.792-110.516h14.802c2.289 0 4.399-1.135 5.686-3.026 1.267-1.885 1.532-4.286 0.69-6.396l-61.995-155.201c-1.042-2.614-3.57-4.326-6.382-4.326s-5.341 1.712-6.382 4.326l-62.008 155.195c-0.849 2.116-0.584 4.519 0.69 6.396 1.281 1.891 3.404 3.026 5.686 3.026h14.815l-41.806 110.522c-0.796 2.103-0.511 4.478 0.77 6.336 1.294 1.858 3.404 2.959 5.666 2.959h15.035l-47.996 113.913c-0.889 2.116-0.663 4.538 0.611 6.462 1.274 1.93 3.424 3.078 5.732 3.078h218.371c2.315 0 4.452-1.148 5.732-3.079 1.267-1.924 1.493-4.339 0.604-6.462zM74.058 254.988l51.858-129.797 51.851 129.797h-103.709zM53.297 374.799l40.127-106.063h64.975l40.134 106.063h-145.236zM27.083 498.252l46.218-109.7h105.221l46.218 109.7h-197.657z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M74.416 475.502c-0.73-7.192-7.285-20.601-9.806-25.564-0.404-0.81-1.566-0.81-1.984 0-2.541 4.943-9.103 18.332-9.806 25.591 0 0.046-0.014 0.099-0.014 0.146-0.026 0.365-0.053 0.704-0.053 1.041 0 6.005 4.864 10.861 10.874 10.861 5.991 0 10.855-4.85 10.855-10.861 0-0.325-0.020-0.657-0.053-1.009 0-0.067-0.007-0.139-0.013-0.205z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M104.087 475.502c-0.723-7.192-7.278-20.601-9.799-25.564-0.418-0.81-1.573-0.81-1.99 0-2.541 4.943-9.109 18.332-9.799 25.591-0.013 0.046-0.013 0.099-0.013 0.146-0.046 0.365-0.059 0.704-0.059 1.041 0 6.005 4.864 10.861 10.861 10.861s10.868-4.85 10.868-10.861c0-0.325-0.020-0.657-0.053-1.009 0-0.067-0.007-0.139-0.013-0.205z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M133.757 475.502c-0.73-7.192-7.285-20.601-9.793-25.564-0.412-0.81-1.559-0.81-1.99 0-2.541 4.943-9.097 18.332-9.806 25.591 0 0.046-0.013 0.099-0.013 0.146-0.026 0.365-0.046 0.704-0.046 1.041 0 6.005 4.87 10.861 10.874 10.861 5.998 0 10.861-4.85 10.861-10.861 0-0.325-0.020-0.657-0.066-1.009 0-0.067-0.013-0.139-0.020-0.205z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M84.275 362.512c1.665 1.015 3.59 1.639 5.68 1.639 5.998 0 10.855-4.87 10.855-10.875 0-0.312-0.020-0.65-0.059-1.009 0-0.067-0.007-0.139-0.020-0.205-0.418-4.219-2.853-10.543-5.281-16.076-1.739-3.908-3.463-7.438-4.511-9.495-0.404-0.803-1.559-0.803-1.984 0-2.534 4.95-9.103 18.325-9.799 25.603-0.007 0.040-0.007 0.093-0.020 0.139-0.026 0.358-0.053 0.716-0.053 1.041 0 3.914 2.084 7.318 5.195 9.236z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M119.618 364.151c5.998 0 10.881-4.87 10.881-10.875 0-0.312-0.026-0.65-0.060-1.009 0-0.067-0.020-0.139-0.026-0.205-0.723-7.205-7.272-20.601-9.806-25.57-0.418-0.803-1.573-0.803-1.984 0-2.534 4.95-9.103 18.325-9.799 25.603-0.007 0.040-0.007 0.093-0.013 0.139-0.026 0.358-0.059 0.716-0.059 1.041 0.007 5.998 4.864 10.875 10.868 10.875z"></path>
+          <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M119.871 242.833c1.593 0.922 3.437 1.5 5.407 1.5 2.376 0 4.551-0.783 6.33-2.070 2.74-1.977 4.538-5.175 4.538-8.804 0-0.312-0.020-0.65-0.053-1.008-0.013-0.066-0.013-0.132-0.026-0.213-0.73-7.198-7.279-20.595-9.799-25.564-0.412-0.81-1.566-0.81-1.984 0-2.534 4.95-9.103 18.319-9.806 25.611-0.007 0.047-0.007 0.093-0.007 0.139-0.033 0.351-0.053 0.71-0.053 1.035 0 4.014 2.203 7.49 5.454 9.375z"></path>
+        </symbol>
+        <symbol id="Swap-icon"  viewBox="0 0 32 32">
+          <path class="swap" fill="var(--color-1)" stroke="var(--color-1)" stroke-width="var(--stroke-1)" d="M0 30.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM0.032 10.368q-0.096-0.608 0.128-1.152t0.704-0.864 1.152-0.352h1.984q0-2.464 1.76-4.224t4.256-1.76h4q0.704 0 1.216 0.416t0.64 0.992 0 1.184-0.64 0.992-1.216 0.416h-4q-0.832 0-1.44 0.576t-0.576 1.408h2.016q0.64 0 1.152 0.384t0.704 0.864 0.096 1.12-0.544 1.056l-4 4q-0.64 0.608-1.44 0.608t-1.376-0.608l-4-4q-0.48-0.448-0.576-1.056zM4 28h4v-4h-4v4zM16.128 28.608q-0.096-0.608 0-1.184t0.64-0.992 1.248-0.416h4q0.8 0 1.408-0.576t0.576-1.44h-1.984q-0.672 0-1.184-0.352t-0.704-0.896-0.096-1.12 0.576-1.024l4-4q0.608-0.608 1.408-0.608t1.408 0.576l4 4q0.48 0.48 0.576 1.088t-0.16 1.12-0.704 0.864-1.12 0.352h-2.016q0 2.496-1.76 4.256t-4.224 1.76h-4q-0.736 0-1.248-0.416t-0.64-0.992zM20 10.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM24 8h4v-4h-4v4z"></path>
+        </symbol>
+        <!-- Undo icon by <a href="https://github.com/kamilagraf/react-swm-icon-pack?ref=svgrepo.com" target="_blank">Software Mansion</a> in CC Attribution License via <a href="https://www.svgrepo.com/" target="_blank">SVG Repo</a> -->
+        <symbol id="Undo-icon"  viewBox="0 0 24 24">
+          <path class="undo" fill="#00000000" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M4 9V15M4 15H10M4 15C6.32744 12.9114 8.48287 10.5468 11.7453 10.0878C13.6777 9.81593 15.6461 10.1794 17.3539 11.1234C19.0617 12.0675 20.4164 13.5409 21.2139 15.3218"></path>
+        </symbol>
+        <!-- Bank icon modified from <a href="https://github.com/kamilagraf/react-swm-icon-pack?ref=svgrepo.com" target="_blank">Software Mansion</a> in CC Attribution License via <a href="https://www.svgrepo.com/" target="_blank">SVG Repo</a> -->
+        <symbol id="Bank-icon"  viewBox="0 0 24 24">
+          <path class="bank" fill="#00000000" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M 19.714172,8.3099505 15.471531,4.0673098 m 0,0 -4.24264,4.2426407 m 4.24264,-4.2426407 c -0.168857,3.1225836 -0.021,6.3187772 -2.003304,8.9502042 -1.174172,1.558654 -2.823018,2.693476 -4.6981374,3.233578 -1.8751836,0.540025 -3.8749735,0.456112 -5.6981917,-0.239243"></path>
+        </symbol>
+      </svg>
+      <div id="historyBox" style="display: none;">
+        <div id="historyBox-LoadSave">
+          <div>Shareable replay:</div>
+          <textarea id="historyBoxText" style="width: 190px; margin: 8px; height: 100px; font-size: 1.3em;"></textarea>
+          <button type="button" onClick="javascript:{navigator.clipboard.writeText(document.getElementById('historyBoxText').value);};" >Copy</button>
+          <button type="button" onClick="javascript:{PlaybackHistory(document.getElementById('historyBoxText').value);};" >Load</button>
+        </div>
+        <div id="historyBox-Playback" style="display: none;">
+          <div style="display: inline-block;">
+            <button type="button" id="buttonStepBak" onClick="javascript:{HistoryStepBackward();};" >Step Back</button><br/>
+            <button type="button" id="buttonStepFwd" onClick="javascript:{HistoryStepForward();};" >Step Fwd</button><br/>
+            <button type="button" onClick="javascript:{HistoryPlay();};" >Play</button><br/>
+            <button type="button" onClick="javascript:{HistoryPause();};" >Pause</button><br/>
+            <button type="button" onClick="javascript:{HistoryRewind();};" >Rewind</button><br/>
+            <button type="button" onClick="javascript:{SetMoveSpeed(1.0);};" >1x</button>
+            <button type="button" onClick="javascript:{SetMoveSpeed(0.5);};" >2x</button><br/><br/>
+            <button type="button" onClick="javascript:{ClosePlayback();};" >Close</button>
+          </div>
+          <div id="playbackMoves" style="display: inline-block; vertical-align: top; overflow: scroll; height: 190px; width: 135px;">
+            asd
+          </div>
+        </div>
       </div>
     </div>
+
   </div>
-  <div style="display: table-row;">
-    <div style="display: table-cell;">
-      <input type="checkbox" id="checkShadow" onClick="javascript:{setStyle('shadow');}" /><label for="checkShadow">Shadow</label><!--
-   --><input type="checkbox" id="checkShadowInverted" onClick="javascript:{setStyle('shadowinverted');}" /><label for="checkShadowInverted">Inverted</label><br/>
-      <input type="checkbox" id="checkOutline" onClick="javascript:{setStyle('outline');}" /><label for="checkOutline">Outline</label><!--
-   --><input type="checkbox" id="checkOutlineInverted" onClick="javascript:{setStyle('outlineinverted');}" /><label for="checkOutlineInverted">Inverted</label><br/>
-    </div>
-    <div style="display: table-cell;">
-      <!-- empty -->
-    </div>
-  </div>
-</div>
-<br/>
-<div id="status"></div>
-<br/>
 
-<div id="bank" style="background-color: lightskyblue; width: 250px; border: 2px solid black;">
-  
-</div>
-<div id="toolbar" style="background-color: lightskyblue; width: 250px; border: 2px solid black;">
-  <span style="">&nbsp;
-    <button onClick="javascript:{console.log('bank code here');};">
-      <span style="font-size: 3em; font-weight: bold; margin: 5px;">⇑</span><br/>
-      <span>Bank</span>
-    </button>
-    <button onClick="javascript:{UndoLast();};">
-      <span style="font-size: 3em; font-weight: bold; margin: 5px;">↶</span><br/>
-      <span>Undo</span>
-    </button>
-  </span>
-</div>
+  <div id="testtest"><a id="download" download="image.png"><button type="button" onClick="download()">Download Image of the current board</button></a> - <a href="https://looneypyramids.wiki/wiki/Solomids" target="_blank">How to play Solomids</a></div>
 
-
-  
-<div style="position: relative; height: 500px;">
-  <canvas id="canvasBoard" width="250" height="500" style="position: absolute; z-index: 100; border:2px solid #d3d3d3;">
-Your browser does not support the HTML5 canvas tag.</canvas>
-  <canvas id="canvasMiddle" width="250" height="500" style="position: absolute; z-index: 200; "></canvas>
-  <canvas id="canvasPieces" width="250" height="500" style="position: absolute; z-index: 300; "></canvas>
-  <canvas id="canvasAnim" width="250" height="500" style="position: absolute; z-index: 400; "></canvas>
-</div>
-<br/>
-<br/>
-
-
-<div>
-<button type="button" onClick="Javascript:ResetBoard();DrawBoard();">Clear Board</button>
- - <a id="download" download="image.png"><button type="button" onClick="download()">Download Image</button></a>
- - <button type="button" onClick="Javascript:RotateBoard('toggle');">Rotate Board</button>
-</div>
-<br/>
-<br/>
-<br/>
-<br/>
-
-<!--
-<div style="width: 250px; height: 200px; border: 2px solid black; background: #aaaaaa;">
-  <svg  class="icon-two-part style1" style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="24px" height="24px" fill="green">
-    <use href="#Pawn-icon"></use>
-  </svg>
-  <svg  class="icon-two-part style1" style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green">
-    <use href="#Drone-icon"></use>
-  </svg>
-  <svg  class="icon-two-part style1" style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="40px" height="40px" fill="green">
-    <use href="#Queen-icon"></use>
-  </svg>
-</div>
--->
-
-  
-<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
-  <symbol id="swap-icon"  viewBox="0 0 32 32">
-    <path d="M0 30.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM0.032 10.368q-0.096-0.608 0.128-1.152t0.704-0.864 1.152-0.352h1.984q0-2.464 1.76-4.224t4.256-1.76h4q0.704 0 1.216 0.416t0.64 0.992 0 1.184-0.64 0.992-1.216 0.416h-4q-0.832 0-1.44 0.576t-0.576 1.408h2.016q0.64 0 1.152 0.384t0.704 0.864 0.096 1.12-0.544 1.056l-4 4q-0.64 0.608-1.44 0.608t-1.376-0.608l-4-4q-0.48-0.448-0.576-1.056zM4 28h4v-4h-4v4zM16.128 28.608q-0.096-0.608 0-1.184t0.64-0.992 1.248-0.416h4q0.8 0 1.408-0.576t0.576-1.44h-1.984q-0.672 0-1.184-0.352t-0.704-0.896-0.096-1.12 0.576-1.024l4-4q0.608-0.608 1.408-0.608t1.408 0.576l4 4q0.48 0.48 0.576 1.088t-0.16 1.12-0.704 0.864-1.12 0.352h-2.016q0 2.496-1.76 4.256t-4.224 1.76h-4q-0.736 0-1.248-0.416t-0.64-0.992zM20 10.016v-8q0-0.832 0.576-1.408t1.44-0.608h8q0.8 0 1.408 0.608t0.576 1.408v8q0 0.832-0.576 1.408t-1.408 0.576h-8q-0.832 0-1.44-0.576t-0.576-1.408zM24 8h4v-4h-4v4z"></path>
-  </symbol>
-</svg>
-<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
-  <symbol id="Pawn-icon" viewBox="-5 -5 147.6 178.9">
-  <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M137.1,159.8L74.9,4.2c-1-2.5-3.4-4.2-6.2-4.2s-5.2,1.6-6.2,4.2L.5,159.8c-.8,2-.6,4.4.7,6.2,1.2,1.8,3.3,2.9,5.5,2.9h124.3c2.2,0,4.3-1.1,5.5-2.9,1.2-1.8,1.5-4.1.7-6.2h0Z"/>
-  <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M79.1,133.8c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
-  </symbol>
-</svg>
-<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
-  <symbol id="Drone-icon" viewBox="-5 -5 188.8 242.1">
-    <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)"  d="M178.4,223.1L95.6,4.3c-1-2.6-3.4-4.3-6.2-4.3s-5.2,1.7-6.2,4.3L.4,223.1c-.8,2-.5,4.3.7,6.1,1.2,1.8,3.3,2.9,5.5,2.9h165.6c2.2,0,4.2-1.1,5.5-2.9,1.2-1.8,1.5-4.1.8-6.1h0Z"/>
-    <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M53.4,207.9c-6,0-10.9-4.9-10.9-10.9,0-.3,0-.7,0-1h0s0,0,0-.1c.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.4,0,.7,0,1,0,6-4.9,10.9-10.9,10.9ZM94,197c0-.3,0-.7,0-1,0,0,0-.1,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0s0,0,0,0c6,0,10.9-4.9,10.9-10.9Z"/>
-  </symbol>
-</svg>
-<svg style="display:none;" hidden aria-hidden="true" focusable="false" version="1.1" xmlns="http://www.w3.org/2000/svg">
-  <symbol id="Queen-icon" viewBox="-5 -5 242.2 283.1">
-    <path class="path1" fill="var(--color-1)" stroke="var(--color-3)" stroke-width="var(--stroke-1)" d="M231.7,263.9L122.2,4.1c-1-2.5-3.4-4.1-6.1-4.1s-5.1,1.6-6.1,4.1L.5,263.9c-.9,2.1-.6,4.4.6,6.2s3.3,3,5.5,3h219c2.2,0,4.3-1.1,5.5-3s1.5-4.2.6-6.2h0Z"/>
-    <path class="path2" fill="var(--color-2)" stroke="var(--color-4)" stroke-width="var(--stroke-2)" d="M83.4,248.9c-6,0-10.9-4.9-10.9-10.9s0-.7,0-1c0,0,0-.1,0-.1.7-7.3,7.3-20.7,9.8-25.7.4-.8,1.6-.8,2,0,2.5,5,9.1,18.4,9.8,25.6,0,0,0,.1,0,.2,0,.3,0,.7,0,1h0c0,6-4.9,10.9-10.9,10.9ZM42.8,238c0,6,4.9,10.9,10.9,10.9s10.9-4.9,10.9-10.9,0-.6,0-1c0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1h0c0,.4,0,.7,0,1ZM124.1,238c0-.3,0-.6,0-1,0,0,0-.2,0-.2-.7-7.2-7.3-20.7-9.8-25.6-.4-.8-1.6-.8-2,0-2.5,5-9.1,18.4-9.8,25.7,0,0,0,0,0,.1,0,.4,0,.7,0,1,0,6,4.9,10.9,10.9,10.9h0c6,0,10.9-4.9,10.9-10.9Z"/>
-  </symbol>
-</svg>
-<script>
- 
-  var seed=0;
-  var startingPieces = "";
-  var boardWidth = 5;
-  var boardHeight = 10;
-  var cellWidth = 50;
-  var cellHeight = 50;
-  var fontSizeRatio = 0.8;
-  var styleDropShadow = false;
-  var styleShadowInverted = false;
-  var styleOutline = false;
-  var styleOutlineInverted = false;
-  var stashColors = [ 
-    ["Select pyramid colors:"], 
-    ["Rainbow Stash", "#ff0000", "#d3d319", "#008000", "#0000ff", "#000000"], 
-    ["Xeno Stash", "#00ffff", "#800080", "#ffa500", "#eeeeee", "#555555"], 
-    ["Test Stash", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
-  ];  //the Xeno stash should be clear and opaque white, not greys
-  var boardColors = [
-    ["", "", "Select board colors:"],
-    ["#000000", "#ffffff", "Black & White"],
-    ["#ffffff", "#000000", "White & Black"],
-    ["#ffffff", "#bbddff", "White & Light Blue"],
-    ["#ffdab9", "#858585", "Peach & Grey"]
-  ];
-  var customStashColor = [];
-  var customBoardColor = [];
-  var boardRotation = 0;
-  var colNames = ["A", "B", "C", "D", "E"];
-  var rowNames = ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"];
-  var drawInnerLabels = false;
+  <script>
     
-  var board;
-  var bag = [];
-  var pieces = [];
-  var clickMode = "none";
-  var selectedCell = [-1, -1];
-  var swap1 = [-1, -1];
-  var swapsUsed = 0;
+    
+    var boardWidth = 5;    //Number of columns
+    var boardHeight = 10;  //Number of rows
+    var cellWidth = 50;    //Pixel width of each square
+    var cellHeight = 50;   //Pixel height of each square
+    
+    var pieceToCellRatio = 0.8;  //Size of Queen pyramid vs smallest square dimension
+    var piecesRatio = [0.4, 0.6, 0.8, 1.0]; //Ratio of smallpawn, Pawn, Drone, and Queen vs Queen
+    
+    
+    // The stashColors arrays are layed out like this:
+    // 0     = Name
+    // 1-5   = Pyramid Colors
+    // 6-10  = Pip Colors  (This and the following default to black if not specified)
+    // 11-15 = Pyramid Stroke Color
+    // 16-20 = Pip Stroke Color
+    var stashColors = [ 
+      ["Select pyramid colors:"], 
+      ["Rainbow Stash", "#ff0000", "#d3d319", "#008000", "#0000ff", "#000000", "#000000", "#000000", "#000000", "#ffffff", "#ffffff", "#000000", "#000000", "#000000", "#ffffff", "#ffffff"], 
+      ["Xeno Stash", "#00ffff", "#800080", "#ffa500", "#eeeeee", "#555555"], 
+      ["Test Stash", "#65388f", "#2ad9f9", "#da8403", "#c7329b", "#f0f678"]
+    ];  //the Xeno stash should be clear and opaque white, not greys
+    var boardColors = [
+      ["", "", "Select board colors:"],
+      ["#000000", "#ffffff", "Black & White"],
+      ["#ffffff", "#000000", "White & Black"],
+      ["#ffffff", "#bbddff", "White & Light Blue"],
+      ["#ffdab9", "#a2a2a2", "Peach & Grey"]
+    ];
+    var customStashColor = [];
+    var customBoardColor = [];
   
-  var moveHistory = [];
-  var moveHist = [];
-  
-  var bank = [];
-  var score = 0;
-
-  //var pyramidColors=["#cc79a7", "#069f73", "#e79f27"];  //Color blind friendly Purple, Green, Orange
-  var pyramidColors=[...stashColors[1]];
-  var fillColors=[...boardColors[1]];
-  var pyramidSizes=["none", "pawn", "drone", "queen"];  //slot 0 is for 1-index padding
-  //var towers=[ [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0] ];
-  //var pyramids=[ [0,0],[0,0],[0,0] ];
-  //var editShape="";
-  //var editPyramid="purple";
-  //var editActive=false;
-  //var bggAnswerBox=false;
-  
-  
-  function DrawBoard(){
-    // Draw the board
-    var c=document.getElementById("canvasBoard");
-    c.width = boardWidth*cellWidth;
-    c.height = boardHeight*cellHeight;
-    var ctx=c.getContext("2d");
-    ctx.beginPath();
-    ctx.fillStyle=fillColors[0];
-    ctx.fillRect(0,0 ,boardWidth*cellWidth,boardHeight*cellHeight);
-    ctx.strokeStyle="#000000";
-    ctx.fillStyle=fillColors[1];
-    ctx.setLineDash([]);
-
-
-    for(i=0;i<boardWidth;i++) {
-      for(j=0;j<boardHeight;j++) {
-        // Draw the squares
-        for(var row=0;row<boardHeight;row++) {
-          for(var col=0; col<boardWidth;col+=2) {
-            startX = col * cellWidth;
-            if(row%2==0) {
-              startX = (col+1) * cellWidth;
-            }
-            ctx.fillRect(startX + left,(row*cellHeight) ,cellWidth,cellHeight);
-          }
-        }
-        if (drawInnerLabels) {
-          //Draw the cell labels inside the cells
-          for(var row=0;row<boardHeight;row++) {
-            for(var col=0; col<boardWidth;col++) {
-              tmpLabel = colNames[col]+rowNames[row];
-              //ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
-              ctx.textBaseline = 'top';
-              //ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-              ctx.fillText  (tmpLabel, (cellWidth*col)+5, (cellHeight*row)+5);
-
-            }
-          }
-        }
-        ctx.moveTo(0,cellHeight*j);
-        ctx.lineTo(boardWidth*cellWidth,cellHeight*j);
-        ctx.stroke();
-     
-        ctx.moveTo(cellWidth*i,0);
-        ctx.lineTo(cellWidth*i,boardHeight*cellHeight);
-        ctx.stroke();
-        var left = 0;
-      }
+    
+    //Fill the "bag" with all of the pieces
+    //DO NOT change the order of the pieces or you will break the seed consistancy
+    var bag = [ [11], [11], [11], [12], [12], [12], [13], [13], [13], [21], [21], [21], [22], [22], [22], [23], [23], [23], [31], [31], [31], [32], [32], [32], [33], [33], [33], [41], [41], [41], [42], [42], [42], [43], [43], [43], [51], [51], [51], [52], [52], [52], [53], [53], [53] ];
+    
+    //Create a 2D array to store our board state in
+    var cells = new Array(boardWidth).fill(0).map(() => new Array(boardHeight).fill([]));
+    
+    var pyramidColors, fillColors;
+    var small = cellWidth;
+    if (cellWidth > cellHeight) {
+      small = cellHeight;
     }
-    ctx.moveTo(0,boardHeight*cellHeight);
-    ctx.lineTo(boardWidth*cellWidth,boardHeight*cellHeight);
-    ctx.stroke();
- 
-    ctx.moveTo(boardWidth*cellWidth,0);
-    ctx.lineTo(boardWidth*cellWidth,boardHeight*cellHeight);
-    ctx.stroke();
+    var pieceSizes = [0, Math.floor(small*(pieceToCellRatio*piecesRatio[1])), Math.floor(small*(pieceToCellRatio*piecesRatio[2])), Math.floor(small*(pieceToCellRatio*piecesRatio[3]))];
+    var pieceSizeNames = ["none", "Pawn-icon", "Drone-icon", "Queen-icon"];
+    var colNames = ["A", "B", "C", "D", "E"];
+    var rowNames = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    var shortSizeNames = ["none", "P", "D", "Q"];
+    var piecesWithIds = {};
     
-    <!-- ctx.font = cellHeight*fontSizeRatio+'px PyramidLove'; -->
-    <!-- ctx.fillStyle = 'orangered'; -->
-    <!-- ctx.textBaseline = 'top'; -->
-    <!-- ctx.fillText  ('\ue99e', (cellWidth-ctx.measureText('\ue99e').width)/2, cellHeight*((1-fontSizeRatio)/2)); -->
-    <!-- ctx.fillText  ('\ue927', (cellWidth*((1-fontSizeRatio)/2))+cellWidth, cellHeight*((1-fontSizeRatio)/2)); -->
-    <!-- ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth+cellWidth, cellHeight*((1-fontSizeRatio)/2)); -->
+    const urlParams = new URLSearchParams(window.location.search);
     
-  }
+    var clickMode = "none";
+    var selectedCell = [-1, -1];
+    var swap1 = [-1, -1];
+    var swapsUsed = 0;
 
-  
-  function ResetBoard() {
-    //board = [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], ];
-    bag = [ 11, 11, 11, 12, 12, 12, 13, 13, 13, 21, 21, 21, 22, 22, 22, 23, 23, 23, 31, 31, 31, 32, 32, 32, 33, 33, 33, 41, 41, 41, 42, 42, 42, 43, 43, 43, 51, 51, 51, 52, 52, 52, 53, 53, 53 ];
-    board = [ [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0] ];
-    var c=document.getElementById("canvasPieces");
-    var ctx=c.getContext("2d");
-    ctx.clearRect(0, 0, c.width, c.height);
-    var m=document.getElementById("canvasMiddle");
-    var midctx=m.getContext("2d");
-    midctx.clearRect(0, 0, m.width, m.height);
-    selectedCell = [-1, -1];
-    clickMode = "none";
-    moveHistory = [];
-    moveHist = [];
-    bank = [];
-    swapsUsed = 0;
-    swap1 = [-1, -1];
-    UpdateBank();
-  }
-  ResetBoard();
+    var showHistory = false;
+    var moveHistory = [];
+    var moveHistory2 = [];
+    var historyPosition = 0;
+    var record = true;
+    var recordedHistory = "";
+    var playing = false;
+    var histPlayTimeout;
+    var moveSpeed = 1.0;
+    var playbackMode = false;
     
-  function AddShape(shape, color, x, y) {
-    //console.log("AddShape("+shape+","+color+","+x+","+y+")");
-    targetX = x;
-    targetY = y;
-    var c=document.getElementById("canvasPieces");
-    var ctx=c.getContext("2d");
-    ctx.strokeStyle="#000000";
-    ctx.lineWidth=1;
-    if (styleDropShadow) {
-      if (styleShadowInverted) {
-        //ctx.shadowColor=invertColor(fillColors[(x+y)%2], true);
-        ctx.shadowColor=fillColors[(x+y+1)%2];
+    var bank = [];
+    var score = 0;
+    
+    var settingsVisible = false;
+    
+    const svg = document.getElementById("table");
+    const svgns = "http://www.w3.org/2000/svg";
+    var tableau = document.createElementNS(svgns, "g");
+    tableau.id = "svg_tableau";
+    svg.appendChild(tableau);
+    var board = document.createElementNS(svgns, "g");
+    board.id = "svg_board";
+    svg.appendChild(board);
+    var bits = document.createElementNS(svgns, "g");
+    bits.id = "svg_bits";
+    svg.appendChild(bits);
+    var queens = document.createElementNS(svgns, "g");
+    queens.id = "svg_board_queens";
+    bits.appendChild(queens);
+    var drones = document.createElementNS(svgns, "g");
+    drones.id = "svg_board_drones";
+    bits.appendChild(drones);
+    var pawns = document.createElementNS(svgns, "g");
+    pawns.id = "svg_board_pawns";
+    bits.appendChild(pawns);
+    var clickLayer = document.createElementNS(svgns, "g");
+    clickLayer.id = "svg_clickLayer";
+    svg.appendChild(clickLayer);
+    
+    var clickRect = document.createElementNS(svgns, "rect");
+    clickRect.setAttribute("x", 0);
+    clickRect.setAttribute("y", 0);
+    clickRect.setAttribute("width", boardWidth*cellWidth);
+    clickRect.setAttribute("height", boardHeight*cellHeight);
+    clickRect.setAttribute("fill-opacity", 0.0);
+    clickRect.style.cursor = "pointer";
+    clickRect.addEventListener('click', function(event) {
+      BoardClicked(event);
+    }, false);
+    clickLayer.appendChild(clickRect);
+  
+    
+    function Settings(source) {
+      setDiv = document.getElementById("settings_div");
+      if (settingsVisible) {
+        //hide settings
+        settingsVisible = false;
+        //setDiv.style.display = "none";
+        setDiv.classList.remove("open");
       } else {
-        ctx.shadowColor="white";
+        //show settings
+        settingsVisible = true;
+        //setDiv.style.display = "block";
+        setDiv.classList.add("open");
       }
-      ctx.shadowBlur=7;
     }
-    ctx.setLineDash([]);
-    ctx.fillStyle=color;
-    ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
-    ctx.textBaseline = 'top';
 
-    if (shape=="pawn") {
-      ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      if (styleOutline) {
-        if (styleOutlineInverted) {
-          ctx.strokeStyle=fillColors[(x+y+1)%2];
+    function SetCustomStashColor() {
+      pyramidColors[1] = document.getElementById("customStashColorPicker1").value;
+      pyramidColors[2] = document.getElementById("customStashColorPicker2").value;
+      pyramidColors[3] = document.getElementById("customStashColorPicker3").value;
+      pyramidColors[4] = document.getElementById("customStashColorPicker4").value;
+      pyramidColors[5] = document.getElementById("customStashColorPicker5").value;
+      for (var c=1; c<=5; c++) {
+        tmpPipColor = "#000000";
+        if (document.getElementById("customStashPipColorPicker"+c).checked) {
+          tmpPipColor = "#ffffff";
         }
-        ctx.strokeText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
+        pyramidColors[5+c] = tmpPipColor;
+        pyramidColors[10+c] = tmpPipColor;
       }
+      
+      customStashColor=[...pyramidColors];
+      customStashColor[0]="Custom-"+customStashColor[0];
+      //saveSettings();
+      SetPyramidColors("custom");
     }
 
-    if (shape=="drone") {
-      ctx.fillText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      if (styleOutline) {
-        if (styleOutlineInverted) {
-          ctx.strokeStyle=fillColors[(x+y+1)%2];
+    function SetCustomBoardColor() {
+      fillColors[0] = document.getElementById("customBoardColorPicker0").value;
+      fillColors[1] = document.getElementById("customBoardColorPicker1").value;
+      customBoardColor=[...fillColors];
+      customBoardColor[2]="Custom-"+customBoardColor[2];
+      //saveSettings();
+      SetBoardColors("custom");
+    }
+
+    
+    
+    function BoardClicked(event, type=0){
+      if (playbackMode) {
+        return;
+      }
+      console.log("Board Clicked: ");
+      //console.log(event);
+      var x = event.clientX - clickLayer.getBoundingClientRect().left;
+      var y = event.clientY - clickLayer.getBoundingClientRect().top;
+      var col = Math.ceil(x/cellWidth)-1;
+      var row = Math.ceil(y/cellHeight)-1;
+      if(col == -1){ col = 0; }
+      if(row == -1){ row = 0; }
+      if(col == boardWidth){ col = boardWidth-1; }
+      if(row == boardHeight){ row = boardHeight-1; }
+      console.log(`Calc Click: ${x}, ${y} | col ${col}, row ${row}`);
+      console.log(cells[col][row]);
+      if (clickMode == "none") {
+        console.log("clickMode: none");
+        if (cells[col][row].length > 0) {
+          selectedCell = [col, row];
+          clickMode = "move";
+          SetCellHighlight(col, row);
+          //if (cells[col][row].length == 3) {
+          //  //A full tree is selected.
+          //  BankTree(col, row, type);
+          //}
         }
-        ctx.strokeText  ('\ue926', ((cellWidth-ctx.measureText('\ue926').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      }
-    }
-
-    if (shape=="queen") {
-      ctx.fillText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      if (styleOutline) {
-        if (styleOutlineInverted) {
-          ctx.strokeStyle=fillColors[(x+y+1)%2];
-        }
-        ctx.strokeText  ('\ue927', ((cellWidth-ctx.measureText('\ue927').width)/2)+cellWidth*x, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*y);
-      }
-    }
-    
-    if (shape=="pyramid") {
-      sx = x*50;
-      sy = y*50;
-      ctx.beginPath();
-      ctx.moveTo(sx+25, sy+10);
-      ctx.lineTo(sx+15, sy+40);
-      ctx.lineTo(sx+35, sy+40);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.fill();
-    }
-
-    if (shape=="active-pyramid") {
-      ctx.setLineDash([5, 3]);
-      ctx.strokeStyle=color;
-      ctx.lineWidth=2;
-      sx = x*50;
-      sy = y*50;
-      ctx.beginPath();
-      ctx.moveTo(sx+25, sy+2);
-      ctx.lineTo(sx+10, sy+43);
-      ctx.lineTo(sx+40, sy+43);
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    if (shape=="square") {
-      sx = x*50;
-      sy = y*50;
-      ctx.beginPath();
-      ctx.rect(sx+5,sy+5,40,40);
-      ctx.stroke();
-      ctx.fill();
-    }
-
-    if (shape=="circle") {
-      sx = x*50;
-      sy = y*50;
-      ctx.beginPath();
-      ctx.arc(sx+25,sy+25,20,0,2*Math.PI);
-      ctx.stroke();
-      ctx.fill();
-    }
-  }
-  
-  function ShuffleBag() {
-    console.log("ShuffleBag()");
-    //document.getElementById("status").innerHTML="<span style='font-family: PyramidLove'>\ue91c</span>";
-    document.getElementById("status").innerHTML="";
-    var newBag=[];
-    var p=45;
-    var usedPieces = [-1, 0, 0, 0];
-    var tmpSizeErrors = 0;
-    var tmpSizeRowErrors = 0;
-    var tmpMatchErrors = 0;
-    var tmpSizeDistErrors = 0;
-    var keepTrying = true;
-    var tmpRow = [];
-    var tmpRow2 = [];
-    
-    do {
-      for (row=0; row<9; row++) {
-        tmpRow = [-1, 0, 0, 0];
-        for (col=0; col<5; col++) {
-          keepTrying=true;
-          do {
-            tmpRand=Math.floor(Math.random()*p);
-            console.log(tmpRand);
-            tmpSize=bag[tmpRand].toString()[1];
-            tmpError=false;
-            if (usedPieces[tmpSize] - row >= 7) {
-              // Make sure there is at least 1 piece left of this size for each of the rows bellow.
-              tmpSizeErrors++;
-              console.log("Size Error "+tmpSizeErrors);
-              tmpError=true;
-            }
-            if (tmpRow[tmpSize]>=3) {
-              // Make sure there are at most 3 of a given size in each row.
-              tmpSizeRowErrors++;
-              console.log("Size in row Error "+tmpSizeRowErrors+"--"+bag[tmpRand]+"|"+newBag[newBag.length-1]);
-              tmpError=true;
-            }
-            if (bag[tmpRand] == newBag[newBag.length-1] && col != 0) {
-              // Make sure no piece matches its neighbor to the left
-              tmpMatchErrors++;
-              console.log("New piece matches previous in same row "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
-              tmpError=true;
-            }
-            tmpRow2=[...tmpRow];
-            tmpRow2[tmpSize]++;
-            if (col == 4 && tmpRow2.includes(0)) {
-              // Make sure there is at least 1 of each size in the row.
-              tmpSizeDistErrors++;
-              console.log("Missing a certain size in this row. "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
-              tmpError=true;
-            }
-            
-            if (!tmpError) {
-              console.log("Good Pull "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
-              usedPieces[tmpSize]++;
-              newBag.push(bag.splice((tmpRand), 1)[0]);
-              tmpRow[tmpSize]++;
-              keepTrying=false;
-            }
-
-            console.log(usedPieces+","+p+","+row+","+col+" || "+tmpRow);
-            if (tmpSizeErrors >= 100 || tmpSizeRowErrors >= 100 || tmpMatchErrors >= 100) {
-              console.log("Too many Errors, breaking");
-              document.getElementById("status").innerHTML="Can't randomize board with this seed.";
-              return(0);
-            }
-          } while (keepTrying);
-          
-          p--;
-        }
-      }
-    } while (p>0);
-    bag=newBag;
-    pieces = [[], [], [], [], []];
-    for (b=0; b<bag.length; b++) {
-      pieces[b+5]=[bag[b]];
-    }
-    console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors+", "+tmpSizeDistErrors);
-  }
-  
-  function DisplayPieces() {
-    ClearPieces();
-    var pos=0;
-    for (row=0; row<=9; row++) {  
-      for (col=0; col<=4; col++) {
-        for (stack=0; stack<pieces[pos].length; stack++) {
-          //console.log("stack: "+stack);
-          //console.log("pieces["+pos+"]");
-          if (pieces[pos] != []) {
-            tmpColor=pyramidColors[pieces[pos][stack].toString()[0]];
-            tmpShape=pyramidSizes[pieces[pos][stack].toString()[1]];
-            var tmpRow = row-(0.2*stack);
-            AddShape(tmpShape, tmpColor, col, tmpRow);
-          }
-        }
-        pos++;
-      }
-    }
-  }
-  
-  function SetStashColor() {
-    var selector = document.getElementById("stashSelector").value;
-    if (selector == "custom") {
-      document.getElementById("customStashColorPickerDiv").style.display="";
-      if (customStashColor.length == 0) {
-        document.getElementById("customStashColorPicker1").value=pyramidColors[1];
-        document.getElementById("customStashColorPicker2").value=pyramidColors[2];
-        document.getElementById("customStashColorPicker3").value=pyramidColors[3];
-        document.getElementById("customStashColorPicker4").value=pyramidColors[4];
-        document.getElementById("customStashColorPicker5").value=pyramidColors[5];
-      } else {
-        document.getElementById("customStashColorPicker1").value=customStashColor[1];
-        document.getElementById("customStashColorPicker2").value=customStashColor[2];
-        document.getElementById("customStashColorPicker3").value=customStashColor[3];
-        document.getElementById("customStashColorPicker4").value=customStashColor[4];
-        document.getElementById("customStashColorPicker5").value=customStashColor[5];
-        pyramidColors=[...customStashColor];
-      }
-    } else {
-      document.getElementById("customStashColorPickerDiv").style.display="none";
-      pyramidColors = [...stashColors[selector]];
-    }
-    saveSettings();
-    DrawBoard();
-    DisplayPieces();
-  }
-  
-  function SetCustomStashColor() {
-    pyramidColors[1] = document.getElementById("customStashColorPicker1").value;
-    pyramidColors[2] = document.getElementById("customStashColorPicker2").value;
-    pyramidColors[3] = document.getElementById("customStashColorPicker3").value;
-    pyramidColors[4] = document.getElementById("customStashColorPicker4").value;
-    pyramidColors[5] = document.getElementById("customStashColorPicker5").value;
-    customStashColor=[...pyramidColors];
-    customStashColor[0]="Custom-"+customStashColor[0];
-    saveSettings();
-    DrawBoard();
-    DisplayPieces();
-  }
-  
-  function SetBoardColor() {
-    var selector = document.getElementById("backgroundSelector").value;
-    if (selector == "custom") {
-      document.getElementById("customBoardColorPickerDiv").style.display="";
-      if (customBoardColor.length == 0) {
-        document.getElementById("customBoardColorPicker0").value=fillColors[0];
-        document.getElementById("customBoardColorPicker1").value=fillColors[1];
-      } else {
-        document.getElementById("customBoardColorPicker0").value=customBoardColor[0];
-        document.getElementById("customBoardColorPicker1").value=customBoardColor[1];
-        fillColors=[...customBoardColor];
-      }
-    } else {
-      document.getElementById("customBoardColorPickerDiv").style.display="none";
-      fillColors = [...boardColors[selector]];
-    }
-    saveSettings();
-    DrawBoard();
-    DisplayPieces();
-  }
-  
-  function SetCustomBoardColor() {
-    fillColors[0] = document.getElementById("customBoardColorPicker0").value;
-    fillColors[1] = document.getElementById("customBoardColorPicker1").value;
-    customBoardColor=[...fillColors];
-    customBoardColor[2]="Custom-"+customBoardColor[2];
-    saveSettings();
-    DrawBoard();
-    DisplayPieces();
-  }
-  
-  function DropClicked(id) {
-    console.log("DropClicked("+id+")");
-    if (id == "stashSelector") {
-      SetStashColor();
-    }
-    if (id == "backgroundSelector") {
-      SetBoardColor();
-    }
-  }
-  
-  function setStyle(type, redraw=true){
-    if (type == "shadow") {
-      styleDropShadow=document.getElementById("checkShadow").checked;
-    }
-    if (type == "shadowinverted") {
-      styleShadowInverted=document.getElementById("checkShadowInverted").checked; 
-      if (styleShadowInverted && !styleDropShadow) {
-        document.getElementById("checkShadow").checked=true; 
-        styleDropShadow=document.getElementById("checkShadow").checked; 
-      }
-    }
-    if (type == "outline") {
-      styleOutline=document.getElementById("checkOutline").checked;
-    }
-    if (type == "outlineinverted") {
-      styleOutlineInverted=document.getElementById("checkOutlineInverted").checked; 
-      if (styleOutlineInverted && !styleOutline) {
-        document.getElementById("checkOutline").checked=true; 
-        styleOutline=document.getElementById("checkOutline").checked; 
-      }
-    }
-    if (redraw) {
-      DrawBoard();
-      DisplayPieces();
-    }
-  }
-  
-  function RotateBoard(ang){
-    if (ang == "toggle") {
-      if (boardRotation == 0) {
-        ang = 90;
-      }
-      if (boardRotation == 90) {
-        ang = -90;
-      }
-      if (boardRotation == -90) {
-        ang = 0;
-      }
-    }
-    if (ang == -90) {
-      document.getElementById("canvasBoard").style.transform="rotate(-90deg) translate(125px,125px)";
-      document.getElementById("canvasPieces").style.transform="rotate(-90deg) translate(125px,125px)";
-      document.getElementById("canvasMiddle").style.transform="rotate(-90deg) translate(125px,125px)";
-      boardRotation = -90;
-    }
-    if (ang == 0) {
-      document.getElementById("canvasBoard").style.transform="";
-      document.getElementById("canvasPieces").style.transform="";
-      document.getElementById("canvasMiddle").style.transform="";
-      boardRotation = 0;
-    }
-    if (ang == 90) {
-      document.getElementById("canvasBoard").style.transform="rotate(90deg) translate(-125px,-125px)";
-      document.getElementById("canvasPieces").style.transform="rotate(90deg) translate(-125px,-125px)";
-      document.getElementById("canvasMiddle").style.transform="rotate(90deg) translate(-125px,-125px)";
-      boardRotation = 90;
-    }
-  }
-  
-  function NewGame() {
-    seed=Math.floor(Math.random()*100000).toString();
-    Math.seedrandom(seed);
-    document.getElementById("seedbox").value=seed;
-    ResetBoard();
-    DrawBoard();
-    //NewTowers();
-    //NewPyramids();
-    //NewTarget();
-    //NewActivePyramid();
-    ShuffleBag();
-    DisplayPieces();
-    startingPieces = JSON.stringify(pieces).replaceAll("[","").replaceAll("]","").replaceAll(",","");
-  }
-
-  function SeedGame() {
-    seed=document.getElementById("seedbox").value.toString();
-    Math.seedrandom(seed);
-    document.getElementById("seedbox").value=seed;
-    ResetBoard();
-    DrawBoard();
-    //NewTowers();
-    //NewPyramids();
-    //NewTarget();
-    //NewActivePyramid();
-    ShuffleBag();
-    DisplayPieces();
-    startingPieces = JSON.stringify(pieces).replaceAll("[","").replaceAll("]","").replaceAll(",","");
-  }
-  
-  function AddCellHighlight(col, row) {
-    console.log("AddCellHighlight()");
-    var m=document.getElementById("canvasMiddle");
-    var midctx=m.getContext("2d");
-    midctx.lineWidth = 8;
-    midctx.strokeStyle = "pink";
-    midctx.strokeRect(col*cellWidth, row*cellHeight, cellWidth, cellHeight);
-  }
-    
-  function SetCellHighlight(col, row) {
-    ClearCellHighlights();
-    AddCellHighlight(col, row);
-  }
-    
-  function ClearCellHighlights() {
-    var m=document.getElementById("canvasMiddle");
-    var midctx=m.getContext("2d");
-    midctx.clearRect(0, 0, m.width, m.height);
-  }
-    
-  function ClearPieces() {
-    var p=document.getElementById("canvasPieces");
-    var pcsctx=p.getContext("2d");
-    pcsctx.clearRect(0, 0, p.width, p.height);
-  }
-  
-  function UpdateBank() {
-    if (bank.length < 15) {
-      score = bank.length;
-    } else {
-      score = bank.length + 2 - swapsUsed;
-    }
-    tmpGrid = ["blank", 0, 0, 0, 0, 0];
-    tmpSwap1 = false;
-    tmpSwap2 = false;
-    var tmpHtml = "Score: "+score+"<br/>";
-    for (b=0; b<bank.length; b++) {
-      var tmpColorNum = bank[b][0].toString()[0];
-      tmpGrid[tmpColorNum]++;
-    }
-    if (tmpGrid[1] >= 1 && tmpGrid[2] >= 1 && tmpGrid[3] >= 1 && tmpGrid[4] >= 1 && tmpGrid[5] >= 1) {
-      tmpSwap1 = true;
-    }
-    if (tmpGrid[1] >= 2 && tmpGrid[2] >= 2 && tmpGrid[3] >= 2 && tmpGrid[4] >= 2 && tmpGrid[5] >= 2) {
-      tmpSwap2 = true;
-    }
-    for (s=1; s<=3; s++) {
-      for (c=1; c<=5; c++) {
-        var tmpColor = pyramidColors[c];
-        if (tmpGrid[c] >= s) {
-          tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue9a0</span>";
+      } else if (clickMode == "move") {
+        if (selectedCell[0] == col && selectedCell[1] == row) {
+          ClearCellHighlights();
+          selectedCell = [-1, -1];
+          clickMode = "none";
         } else {
-          tmpHtml += "<span style='color: "+tmpColor+"; font-family: \"PyramidLove\"; font-size: 3em; text-shadow: 1px 1px 10px black'>\ue95f</span>";
+          MovePyramid(col, row);
+        }
+      } else if (clickMode == "swap") {
+        if (cells[col][row].length > 0) {
+          if (swap1[0] == -1) {
+            //Set the first cell in the swap
+            swap1 = [col, row];
+            SetCellHighlight(col, row);
+          } else if (swap1[0] == col && swap1[1] == row) {
+            //Clicked the same cell twice, clear the highlight
+            ClearCellHighlights();
+            swap1 = [-1, -1];
+          } else {
+            //Must have clicked a 2nd cell, swap them
+            SwapPyramids(col, row);
+          }
         }
       }
-    if (s == 1) {
-      if (tmpSwap1 && swapsUsed < 1) {
-        //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-        tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
-      } else if (tmpSwap1 && swapsUsed >= 1) {
-        //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
-      } else {
-        //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
+    }
+    
+    function SwapPyramids(col, row) {
+      var tmpSwap = cells[col][row];
+      var tmpPos2 = [swap1[0], swap1[1]];
+      if (record) {
+        moveHistory.push(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]]);
+        moveHistory2.push(JSON.parse(JSON.stringify(["swap", [col,row], cells[col][row], [swap1[0],swap1[1]], cells[swap1[0]][swap1[1]]])));
       }
-    } else if (s == 2) {
-      if (tmpSwap2 && swapsUsed < 2) {
-        //tmpHtml += "<span style='color: green; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-        tmpHtml += '<svg style="margin: -10px 15px; border: 1px solid black; padding: 3px; border-radius: 5px; background: white; cursor: pointer;" width="32px" height="32px" fill="green" onClick="javascipt:{StartSwap();};"><use href="#swap-icon"></use></svg>';
-      } else if (tmpSwap2 && swapsUsed >= 2) {
-        //tmpHtml += "<span style='color: red; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="red"><use href="#swap-icon"></use></svg>';
-      } else {
-        //tmpHtml += "<span style='color: grey; font-family: \"PyramidLove\"; font-size: 2em;'>\uea54</span>";
-        tmpHtml += '<svg style="margin: -5px 15px;" width="32px" height="32px" fill="grey"><use href="#swap-icon"></use></svg>';
+      //moveHist.push(["w", [col,row], tmpPos2]);
+      cells[col][row] = cells[swap1[0]][swap1[1]];
+      for (var o=0; o<cells[col][row].length; o++) {
+        //cells[col][row][o].col = col;
+        piecesWithIds[cells[col][row][o]].col = col;
+        //cells[col][row][o].row = row;
+        piecesWithIds[cells[col][row][o]].row = row;
       }
-    }
-    tmpHtml += "<br/>";
-    }
-    document.getElementById("bank").innerHTML = tmpHtml;
-  }
-
-  function StartSwap() {
-    console.log("StartSwap()");
-    ClearCellHighlights();
-    selectedCell = [-1, -1];
-    setTimeout(() => {
-      clickMode = "swap";
-    }, 200);
-
-  }
-  
-  function UndoLast() {
-    console.log("UndoLast()");
-    if (moveHistory.length <= 0) {
-      console.log("No hisotry to undo.");
-      return;
-    }
-    tmpMove = moveHistory.pop();
-    moveHist.pop();
-    if (tmpMove[0] == "move" || tmpMove[0] == "top") {
-      pieces[tmpMove[1]] = pieces[tmpMove[1]].concat(tmpMove[2]);
-      pieces[tmpMove[3]] = pieces[tmpMove[3]].splice(0,pieces[tmpMove[3]].indexOf(tmpMove[2][0]));
-    } else if (tmpMove[0] == "slide") {
-      for (s=tmpMove[1].length-1; s>=0; s--) {
-        pieces[tmpMove[1][s][0]] = pieces[tmpMove[1][s][0]].concat(tmpMove[1][s][1]);
-        pieces[tmpMove[1][s][2]] = pieces[tmpMove[1][s][2]].splice(0,pieces[tmpMove[1][s][2]].indexOf(tmpMove[1][s][1][0]));
+      cells[swap1[0]][swap1[1]] = tmpSwap;
+      for (var n=0; n<cells[swap1[0]][swap1[1]].length; n++) {
+        //cells[swap1[0]][swap1[1]][n].col = swap1[0];
+        piecesWithIds[cells[swap1[0]][swap1[1]][n]].col = swap1[0];
+        //cells[swap1[0]][swap1[1]][n].row = swap1[1];
+        piecesWithIds[cells[swap1[0]][swap1[1]][n]].row = swap1[1];
       }
-    } else if (tmpMove[0] == "bank") {
-      pieces[tmpMove[1]] = bank[bank.length-1];
-      bank.pop();
-    } else if (tmpMove[0] == "swap") {
-      pieces[tmpMove[1]] = tmpMove[2];
-      pieces[tmpMove[3]] = tmpMove[4];
-      swapsUsed--;
-    }
-    UpdateBank();
-    DisplayPieces();
-    ClearCellHighlights();
-    selectedCell = [-1, -1];
-    clickMode = "none";
-  }
-  
-  function FullTreeSelected(col, row, type) {
-    console.log("FullTreeSelected("+col+", "+row+", "+type+")");
-    if (type == 2) {
-      //Tree was double-clicked
-      var tmpPos = (row * boardWidth)+col;
-      bank.push(pieces[tmpPos]);
-      moveHistory.push(["bank", tmpPos, pieces[tmpPos]]);
-      moveHist.push(["b", tmpPos, Number(pieces[tmpPos][0].toString()[0])]);
-      pieces[tmpPos] = [];
+      document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
+      document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
+      swapsUsed++;
+      ClearCellHighlights();
+      swap1 = [-1, -1];
+      UpdatePiecesOnBoard();
       UpdateBank();
-      DisplayPieces();
+      clickMode = "none";
+    }
+    
+    function BankTree(col, row, type, src) {
+      if (src == "button" && playbackMode) {
+        return;
+      }
+      // A full tree was clicked, are we banking it?
+      console.log("BankTree("+col+", "+row+", "+type+")");
+      if (type == 2 && selectedCell[0] != -1 && cells[col][row].length == 3) {
+        // Tree was double-clicked
+        // Not using double-click anymore, but keeping the logic the same
+        console.log("Bank that tree!");
+        var tmpPos = (row * boardWidth)+col;
+        for (var p=0; p<cells[col][row].length; p++) {
+          //cells[col][row][p].bank = true;
+          piecesWithIds[cells[col][row][p]].bank = true;
+        }
+        bank.push(cells[col][row]);
+        if (record) {
+          moveHistory.push(["bank", [col,row], cells[col][row]]);
+          moveHistory2.push(JSON.parse(JSON.stringify(["bank", [col,row], cells[col][row]])));
+        }
+        //moveHist.push(["b", tmpPos, Number(cells[col][row][0].toString()[0])]);
+        cells[col][row] = [];
+        UpdateBank();
+        UpdatePiecesOnBoard();
+      }
       ClearCellHighlights();
       selectedCell = [-1, -1];
       clickMode = "none";
     }
-  }
     
-  function boardClicked(event, type) {
-    var c = document.getElementById('canvasPieces');
-    const rect = c.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    //console.log("x: " + x + " y: " + y);
-    col=Math.ceil(x/cellWidth)-1;
-    row=Math.ceil(y/cellHeight)-1;
-    if(col == -1){ col = 0; }
-    if(row == -1){ row = 0; }
-    if(col == boardWidth){ col = boardWidth-1; }
-    if(row == boardHeight){ row = boardHeight-1; }
-    console.log("Row: " + row + " Col: " + col + " Type: " + type);
-    var tmpPos = (row * boardWidth)+col;
-    console.log("Pieces["+tmpPos+"]: "+pieces[tmpPos]);
-    if (clickMode == "none") {
-      console.log("clickMode: none");
-      if (pieces[tmpPos].length > 0) {
-        selectedCell = [col, row];
-        clickMode = "move";
-        SetCellHighlight(col, row);
-        if (pieces[tmpPos].length == 3) {
-          //A full tree is selected.
-          FullTreeSelected(col, row, type);
+    function DrawTable() {
+      // Adds the various SVGs to the "table"(svg)
+      var tmpWidth = (boardWidth * cellWidth)*2;
+      var tmpHeight = boardHeight * cellHeight;
+      svg.setAttribute("width", tmpWidth);
+      svg.setAttribute("height", tmpHeight);
+      svg.setAttribute("viewBox", "0 0 "+tmpWidth+" "+tmpHeight);
+      
+      // Draw the Tableau on the right
+      var tRect = document.createElementNS(svgns, "rect");
+      tRect.setAttribute("x", 0);
+      tRect.setAttribute("y", 0);
+      tRect.setAttribute("width", tmpWidth);
+      tRect.setAttribute("height", tmpHeight);
+      tRect.setAttribute("fill", "#bbb");
+      tableau.appendChild(tRect);
+      
+      // Draw the Score Field
+      var sText = document.createElementNS(svgns, "text");
+      sText.id = "score-text";
+      sText.setAttribute("x", 270);
+      sText.setAttribute("y", 10);
+      sText.setAttribute("fill", "#000000");
+      sText.setAttribute("font", "Arial");
+      sText.setAttribute("dominant-baseline", "hanging");
+      sText.innerHTML = "Score: 0";
+      tableau.appendChild(sText);
+      
+      // Draw the Hollow Bank Trees
+      var tmpSize = cellHeight;
+      for (c=0; c<5; c++) {
+        for (r=0; r<3; r++) {
+          AddSVG(tableau, "Hollow-Tree-icon", "testTree", (260+(c*tmpSize*.5)), (tmpSize*r)+30, tmpSize, tmpSize, "hollow-style"+(c+1));
         }
       }
-    } else if (clickMode == "move") {
-      if (selectedCell[0] == col && selectedCell[1] == row) {
-        ClearCellHighlights();
-        selectedCell = [-1, -1];
-        clickMode = "none";
-      } else {
-        MovePyramid(col, row);
-      }
-    } else if (clickMode == "swap") {
-      if (pieces[tmpPos].length > 0) {
-        if (swap1[0] == -1) {
-          swap1 = [col, row];
-          SetCellHighlight(col, row);
-        } else if (swap1[0] == col && swap1[1] == row) {
-          ClearCellHighlights();
-          swap1 = [-1, -1];
-        } else {
-          var tmpSwap = pieces[tmpPos];
-          var tmpPos2 = (swap1[1] * boardWidth)+swap1[0];
-          moveHistory.push(["swap", tmpPos, pieces[tmpPos], tmpPos2, pieces[tmpPos2]]);
-          moveHist.push(["w", tmpPos, tmpPos2]);
-          pieces[tmpPos] = pieces[tmpPos2];
-          pieces[tmpPos2] = tmpSwap;
-          swapsUsed++;
-          ClearCellHighlights();
-          swap1 = [-1, -1];
-          DisplayPieces();
-          UpdateBank();
-          clickMode = "none";
+      
+      // Draw the Swap buttons
+      var s1Rect = document.createElementNS(svgns, "rect");
+      s1Rect.id = "SwapButton1Background";
+      s1Rect.setAttribute("x", 410);
+      s1Rect.setAttribute("y", 40);
+      s1Rect.setAttribute("width", 40);
+      s1Rect.setAttribute("height", 40);
+      s1Rect.setAttribute("rx", 5);
+      s1Rect.setAttribute("fill", "#ffffff");
+      s1Rect.setAttribute("stroke", "#000000");
+      tableau.appendChild(s1Rect);
+      AddSVG(tableau, "Swap-icon", "SwapButton1", 415, 45, 30, 30, "swap-icon-unavailable");
+      var s1cRect = document.createElementNS(svgns, "rect");
+      s1cRect.id = "SwapButton1Click";
+      s1cRect.setAttribute("x", 410);
+      s1cRect.setAttribute("y", 40);
+      s1cRect.setAttribute("width", 40);
+      s1cRect.setAttribute("height", 40);
+      s1cRect.setAttribute("fill-opacity", 0.0);
+      s1cRect.style.cursor = "pointer";
+      s1cRect.style.display = "none";
+      s1cRect.addEventListener('click', function(event) {
+        console.log("Swap 1 Button Clicked");
+        StartSwap(1);
+      }, false);
+      tableau.appendChild(s1cRect);
+      
+      var s1Rect = document.createElementNS(svgns, "rect");
+      s1Rect.id = "SwapButton2Background";
+      s1Rect.setAttribute("x", 410);
+      s1Rect.setAttribute("y", 90);
+      s1Rect.setAttribute("width", 40);
+      s1Rect.setAttribute("height", 40);
+      s1Rect.setAttribute("rx", 5);
+      s1Rect.setAttribute("fill", "#ffffff");
+      s1Rect.setAttribute("stroke", "#000000");
+      tableau.appendChild(s1Rect);
+      AddSVG(tableau, "Swap-icon", "SwapButton2", 415, 95, 30, 30, "swap-icon-unavailable");
+      var s1cRect = document.createElementNS(svgns, "rect");
+      s1cRect.id = "SwapButton2Click";
+      s1cRect.setAttribute("x", 410);
+      s1cRect.setAttribute("y", 90);
+      s1cRect.setAttribute("width", 40);
+      s1cRect.setAttribute("height", 40);
+      s1cRect.setAttribute("fill-opacity", 0.0);
+      s1cRect.style.cursor = "pointer";
+      s1cRect.style.display = "none";
+      s1cRect.addEventListener('click', function(event) {
+        console.log("Swap 2 Button Clicked");
+        StartSwap(2);
+      }, false);
+      tableau.appendChild(s1cRect);
+      
+      // Draw the Bank button
+      var bRect = document.createElementNS(svgns, "rect");
+      bRect.setAttribute("x", 270);
+      bRect.setAttribute("y", 200);
+      bRect.setAttribute("width", 80);
+      bRect.setAttribute("height", 35);
+      bRect.setAttribute("rx", 5);
+      bRect.setAttribute("fill", "#ffffff");
+      bRect.setAttribute("stroke", "#000000");
+      tableau.appendChild(bRect);
+      var bText = document.createElementNS(svgns, "text");
+      bText.setAttribute("x", 300);
+      bText.setAttribute("y", 210);
+      bText.setAttribute("fill", "#000000");
+      bText.setAttribute("font", "Arial");
+      bText.setAttribute("dominant-baseline", "hanging");
+      bText.innerHTML = "Bank";
+      tableau.appendChild(bText);
+      AddSVG(tableau, "Bank-icon", "BankButton1", 270, 205, 30, 30, "nostyle");
+      var cRect = document.createElementNS(svgns, "rect");
+      cRect.setAttribute("x", 270);
+      cRect.setAttribute("y", 200);
+      cRect.setAttribute("width", 75);
+      cRect.setAttribute("height", 35);
+      cRect.setAttribute("fill-opacity", 0.0);
+      cRect.style.cursor = "pointer";
+      cRect.addEventListener('click', function(event) {
+        console.log("Bank Button Clicked");
+        BankTree(selectedCell[0], selectedCell[1], 2, "button");
+      }, false);
+      tableau.appendChild(cRect);
+      
+      // Draw the Undo button
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 370);
+      bRect2.setAttribute("y", 200);
+      bRect2.setAttribute("width", 80);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("rx", 5);
+      bRect2.setAttribute("fill", "#ffffff");
+      bRect2.setAttribute("stroke", "#000000");
+      tableau.appendChild(bRect2);
+      var bText2 = document.createElementNS(svgns, "text");
+      bText2.setAttribute("x", 400);
+      bText2.setAttribute("y", 210);
+      bText2.setAttribute("fill", "#000000");
+      bText2.setAttribute("font", "Arial");
+      bText2.setAttribute("dominant-baseline", "hanging");
+      bText2.innerHTML = "Undo";
+      tableau.appendChild(bText2);
+      AddSVG(tableau, "Undo-icon", "UndoButton1", 370, 202, 30, 30, "nostyle");
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 370);
+      bRect2.setAttribute("y", 200);
+      bRect2.setAttribute("width", 75);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("fill-opacity", 0.0);
+      bRect2.style.cursor = "pointer";
+      bRect2.addEventListener('click', function(event) {
+        console.log("Undo Button Clicked");
+        UndoLast("button");
+      }, false);
+      tableau.appendChild(bRect2);
+      
+      // Draw the Moves count
+      var mText = document.createElementNS(svgns, "text");
+      mText.id = "moves-text";
+      mText.setAttribute("x", 390);
+      mText.setAttribute("y", 10);
+      mText.setAttribute("fill", "#000000");
+      mText.setAttribute("font", "Arial");
+      mText.setAttribute("dominant-baseline", "hanging");
+      mText.innerHTML = "Moves: 0";
+      tableau.appendChild(mText);
+      
+      // Draw the History button
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 400);
+      bRect2.setAttribute("y", 460);
+      bRect2.setAttribute("width", 67);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("rx", 5);
+      bRect2.setAttribute("fill", "#ffffff");
+      bRect2.setAttribute("stroke", "#000000");
+      tableau.appendChild(bRect2);
+      var bText2 = document.createElementNS(svgns, "text");
+      bText2.setAttribute("x", 405);
+      bText2.setAttribute("y", 470);
+      bText2.setAttribute("fill", "#000000");
+      bText2.setAttribute("font", "Arial");
+      bText2.setAttribute("dominant-baseline", "hanging");
+      bText2.innerHTML = "History";
+      tableau.appendChild(bText2);
+      var bRect2 = document.createElementNS(svgns, "rect");
+      bRect2.setAttribute("x", 400);
+      bRect2.setAttribute("y", 460);
+      bRect2.setAttribute("width", 67);
+      bRect2.setAttribute("height", 35);
+      bRect2.setAttribute("fill-opacity", 0.0);
+      bRect2.style.cursor = "pointer";
+      bRect2.addEventListener('click', function(event) {
+        console.log("History Button Clicked");
+        History();
+      }, false);
+      tableau.appendChild(bRect2);
+      
+      // Draw the Board Squares with alternating colors
+      // I don't think this works with an odd number of columns
+      var fill, cls;
+      for (row=0; row<boardHeight; row++) {
+        for (col=0; col<boardWidth; col++) {
+          if ((col+row)%2) {
+            fill = fillColors[1];
+            cls = "boardCellClass1";
+          } else {
+            fill = fillColors[0];
+            cls = "boardCellClass0";
+          }
+          var newRect = document.createElementNS(svgns, "rect");
+          newRect.setAttribute("x", col*cellWidth);
+          newRect.setAttribute("y", row*cellHeight);
+          newRect.setAttribute("width", cellWidth);
+          newRect.setAttribute("height", cellHeight);
+          newRect.setAttribute("fill", fill);
+          newRect.setAttribute("class", cls);
+          board.appendChild(newRect);
         }
       }
     }
-  }
-  
-  function MovePyramid(targetCol, targetRow) {
-    var targetPos = (targetRow * boardWidth)+targetCol;
-    var oldCol = selectedCell[0];
-    var oldRow = selectedCell[1];
-    var oldPos = (oldRow * boardWidth)+oldCol;
-    console.log("MovePyramid: from: "+oldPos+" to: "+targetPos);
     
-    var colorsOK = false;
-    var sizesOK = false;
-    var topMove = false;
-    var topMoveElev = -1;
-    var orthogOK = false;
-    var pathOK = false;
-    var slide = false;
+    //https://stackoverflow.com/questions/6620393/is-it-possible-to-alter-a-css-stylesheet-using-javascript-not-the-style-of-an
+    function adjustCSSRules(selector, props, sheets){
+      // Replaces the value in a stylesheet
+      // get stylesheet(s)
+      if (!sheets) sheets = [...document.styleSheets];
+      else if (sheets.sup){    // sheets is a string
+        let absoluteURL = new URL(sheets, document.baseURI).href;
+        sheets = [...document.styleSheets].filter(i => i.href == absoluteURL);
+        }
+      else sheets = [sheets];  // sheets is a stylesheet
+
+      // CSS (& HTML) reduce spaces in selector to one.
+      selector = selector.replace(/\s+/g, ' ');
+      const findRule = s => [...s.cssRules].reverse().find(i => i.selectorText == selector)
+      let rule = sheets.map(findRule).filter(i=>i).pop()
+
+      const propsArr = props.sup
+        ? props.split(/\s*;\s*/).map(i => i.split(/\s*:\s*/)) // from string
+        : Object.entries(props);                              // from Object
+
+      if (rule) for (let [prop, val] of propsArr){
+        // rule.style[prop] = val; is against the spec, and does not support !important.
+        rule.style.setProperty(prop, ...val.split(/ *!(?=important)/));
+      }
+      else {
+        sheet = sheets.pop();
+        if (!props.sup) props = propsArr.reduce((str, [k, v]) => `${str}; ${k}: ${v}`, '');
+        sheet.insertRule(`${selector} { ${props} }`, sheet.cssRules.length);
+      }
+    }
+   
+    function AddSVG(parent, shape, id, x, y, width, height, style) {
+      // Add a pre-defined SVG (shape) to the (parent) element
+      console.log("AddSVG("+parent);
+      var tmpPath = document.createElementNS(svgns, "use");
+      tmpPath.id = id;
+      tmpPath.setAttribute("href", "#"+shape);
+      tmpPath.setAttribute("width", width);
+      tmpPath.setAttribute("height", height);
+      tmpPath.setAttribute("x", x);
+      tmpPath.setAttribute("y", y);
+      tmpPath.setAttribute("fill", "#5cceee");
+      tmpPath.classList.add("icon-two-part");
+      tmpPath.classList.add(style);
+      tmpPath.classList.add("move-slow");
+      parent.appendChild(tmpPath);
+    }
     
-    if (pieces[targetPos].length == 0) {
-      //Target cell is empty, are we sliding?
-      console.log("Target cell empty, slide?");
-      if ((oldCol == targetCol) && (oldRow > targetRow)) {
-        console.log("Columns match & target is above.");
-        if (oldRow == targetRow+1) {
-          //Target is directly above
-          console.log("Slide target immediately above.");
-          slide = true;
-        } else {
-          console.log("Slide target in same column but not adjacent");
-          var checkPath = true;
-          //Cells are 2 or more row apart with the target above
-          for (r=targetRow+1; r<oldRow; r++) {
-            var tmpPos = (r * boardWidth)+oldCol;
-            if (pieces[tmpPos].length != 0) {
-              checkPath = false;
+    function ShuffleBag() {
+      var t0 = performance.now();
+      console.log("ShuffleBag()");
+      //document.getElementById("status").innerHTML="";
+      var newBag=[];
+      var p=45;
+      var usedPieces = [-1, 0, 0, 0];
+      var tmpSizeErrors = 0;
+      var tmpSizeRowErrors = 0;
+      var tmpMatchErrors = 0;
+      var tmpSizeDistErrors = 0;
+      var tmpAttempts = 0;
+      var keepTrying = true;
+      var tmpRow = [];
+      var tmpRow2 = [];
+
+      do {
+        for (row=0; row<9; row++) {
+          tmpRow = [-1, 0, 0, 0];
+          for (col=0; col<5; col++) {
+            keepTrying=true;
+            do {
+              tmpRand=Math.floor(Math.random()*p);
+              //console.log(tmpRand);
+              tmpSize=Number(bag[tmpRand][0].toString()[1]);
+              tmpError=false;
+              if (usedPieces[tmpSize] - row >= 7) {
+                // Make sure there is at least 1 piece left of this size for each of the rows bellow.
+                tmpSizeErrors++;
+                //console.log("Size Error "+tmpSizeErrors);
+                tmpError=true;
+              }
+              if (tmpRow[tmpSize]>=3) {
+                // Make sure there are at most 2 of a given size in each row.
+                tmpSizeRowErrors++;
+                //console.log("Size in row Error "+tmpSizeRowErrors+"--"+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                tmpError=true;
+              }
+              if (bag[tmpRand][0] == newBag[newBag.length-1] && col != 0) {
+                // Make sure no piece matches its neighbor to the left
+                tmpMatchErrors++;
+                //console.log("New piece matches previous in same row "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                tmpError=true;
+              }
+              tmpRow2=[...tmpRow];
+              tmpRow2[tmpSize]++;
+              if (col == 4 && tmpRow2.includes(0)) {
+                // Make sure there is at least 1 of each size in the row.
+                tmpSizeDistErrors++;
+                //console.log("Missing a certain size in this row. "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                tmpError=true;
+              }
+
+              if (!tmpError) {
+                //console.log("Good Pull "+bag[tmpRand]+"|"+newBag[newBag.length-1]);
+                usedPieces[tmpSize]++;
+                newBag.push(bag.splice((tmpRand), 1)[0]);
+                tmpRow[tmpSize]++;
+                //console.log(bag.length+"|"+newBag.length);
+                keepTrying=false;
+              }
+
+              //console.log(usedPieces+","+p+","+row+","+col+" || "+tmpRow);
+              tmpAttempts++;
+              if (tmpSizeErrors >= 100 || tmpSizeRowErrors >= 100 || tmpMatchErrors >= 100 || tmpAttempts >= 200) {
+                console.log("Too many Errors, breaking");
+                //document.getElementById("status").innerHTML="Can't randomize board with this seed.";
+                return(false);
+              }
+            } while (keepTrying);
+
+            p--;
+          }
+        }
+      } while (p>0);
+      bag=newBag;
+      
+      var tmpBag = JSON.parse(JSON.stringify(bag));
+      console.log(JSON.stringify(cells));
+                
+      for (var key in piecesWithIds) {
+        if (piecesWithIds.hasOwnProperty(key)) {
+          var tmpPiece = ""+piecesWithIds[key].color+piecesWithIds[key].size;
+          for (p=0; p<tmpBag.length; p++) {
+            if (tmpBag[p][0] == tmpPiece) {
+              piecesWithIds[key].col = p%boardWidth;
+              piecesWithIds[key].row = Math.floor(p/boardWidth)+1;
+              piecesWithIds[key].elev = 0;
+              tmpBag[p][0] = null;
+              //cells[piecesWithIds[key].col][piecesWithIds[key].row] = [piecesWithIds[key]];
+              cells[piecesWithIds[key].col][piecesWithIds[key].row] = [key];
               break;
             }
           }
-          
-          slide = checkPath;
-          
-        }
-        console.log("Slide?: "+slide);
-      }
-      if (slide) {
-        console.log("We're Sliding!");
-        var slideTarget = -1;
-        for (t=targetRow; t>=0; t--) {
-          if (pieces[((t * boardWidth)+targetCol)].length == 0) {
-            slideTarget = t;
-          } else {
-            break;
-          }
-        }
-        console.log("SlideTarget: "+slideTarget);
-        slideDistance = oldRow-slideTarget;
-        console.log("Distance: "+slideDistance);
-        tmpHist = [];
-        for (r=oldRow; r<boardHeight; r++) {
-          tmpPos = (r * boardWidth)+targetCol;
-          if (pieces[tmpPos].length > 0) {
-            tmpHist.push([tmpPos, pieces[tmpPos], tmpPos-(slideDistance*boardWidth)]);
-            pieces[tmpPos-(slideDistance*boardWidth)] = pieces[tmpPos];
-            pieces[tmpPos] = [];
-          } else {
-            break;
-          }
-        }
-        moveHistory.push(["slide", tmpHist]);
-        moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
-        DisplayPieces();
-        ClearCellHighlights();
-        selectedCell = [-1, -1];
-        clickMode = "none";
-      }
-    } else {
-      if (pieces[oldPos][0].toString()[0] == pieces[targetPos][0].toString()[0]) {
-        //The colors of the old and target pieces match
-        console.log("Colors Match");
-        colorsOK = true;
-      }
-      if (Number((pieces[oldPos][0].toString()[1]))+1 == Number(pieces[targetPos][pieces[targetPos].length-1].toString()[1])) {
-        //The size of the old piece is 1 smaller than the target piece
-        console.log("Old piece is 1 smaller than target piece");
-        sizesOK = true;
-      } else {
-        if (pieces[oldPos].length > 1) {
-          //The old tower has several pieces, check if we can move 1 or 2 of them instead of whole stack.
-          console.log("Old stack has more than 1 piece");
-          for (p=1; p<pieces[oldPos].length; p++) {
-            console.log(p);
-            if (Number((pieces[oldPos][p].toString()[1]))+1 == Number(pieces[targetPos][pieces[targetPos].length-1].toString()[1])) {
-              console.log("We can do a topMove");
-              topMove = true;
-              topMoveElev = p;
-            }
-          }
+          piecesWithIds[key].bank = false;
+          tmpElem = document.getElementById(piecesWithIds[key].id);
+          tmpElem.setAttribute("width", pieceSizes[piecesWithIds[key].size]);
+          tmpElem.setAttribute("height", pieceSizes[piecesWithIds[key].size]);
         }
       }
-      if ((oldCol == targetCol) || (oldRow == targetRow)) {
-        //The old and target cells share a column or row
-        orthogOK = true;
-
-        if (oldCol == targetCol) {
-          if ((oldRow == targetRow+1) || (oldRow == targetRow-1)) {
-            //Cells are directly above/below each other
-            pathOK = true;
-          } else {
-            console.log("Cells in same column but not adjacent");
-            var checkPath = true;
-            if (targetRow > oldRow) {
-              //Cells are 2 or more rows apart with the target bellow
-              console.log("Target cell bellow");
-              for (r=oldRow+1; r<targetRow; r++) {
-                //console.log(r);
-                var tmpPos = (r * boardWidth)+oldCol;
-                //console.log(tmpPos);
-                if (pieces[tmpPos].length != 0) {
-                  checkPath = false;
-                  break;
-                }
-              }
-            } else {
-              //Cells are 2 or more row apart with the target above
-              console.log("Target cell above");
-              for (r=targetRow+1; r<oldRow; r++) {
-                var tmpPos = (r * boardWidth)+oldCol;
-                if (pieces[tmpPos].length != 0) {
-                  checkPath = false;
-                  break;
-                }
-              }
-            }
-            pathOK = checkPath;
-          }
-        }
-        if (oldRow == targetRow) {
-          if ((oldCol == targetCol+1) || (oldCol == targetCol-1)) {
-            //Cells are side by side
-            pathOK = true;
-          } else {
-            console.log("Cells on same row but not adjacent");
-            var checkPath = true;
-            if (targetCol > oldCol) {
-              //Cells are 2 or more columns apart with the target on the right
-              console.log("Target cell on right");
-              for (c=oldCol+1; c<targetCol; c++) {
-                //console.log(c);
-                var tmpPos = (oldRow * boardWidth)+c;
-                //console.log(tmpPos);
-                if (pieces[tmpPos].length != 0) {
-                  checkPath = false;
-                  break;
-                }
-              }
-            } else {
-              //Cells are 2 or more columns apart with the target on the left
-              console.log("Target cell on left");
-              for (c=targetCol+1; c<oldCol; c++) {
-                var tmpPos = (oldRow * boardWidth)+c;
-                if (pieces[tmpPos].length != 0) {
-                  checkPath = false;
-                  break;
-                }
-              }
-            }
-            pathOK = checkPath;
-          }
-        }
+      
+      for (var c=0; c<5; c++) {
+        cells[c][0] = [];
       }
+      bank = [];
+      console.log("Errors: "+tmpSizeErrors+", "+tmpSizeRowErrors+", "+tmpMatchErrors+", "+tmpSizeDistErrors+", "+tmpAttempts);
+      var t1 = performance.now();
+      console.log(`ShuffleBag() took ${t1 - t0} milliseconds.`);
+      return(true);
+    }
     
-      if (colorsOK && orthogOK && pathOK && (sizesOK || topMove)) {
-        if (sizesOK && !topMove) {
-          console.log("Move that Piece(s)!");
-          moveHistory.push(["move", oldPos, pieces[oldPos], targetPos]);
-          moveHist.push(["m", oldPos, targetPos]);
-          pieces[targetPos] = pieces[targetPos].concat(pieces[oldPos]);
-          pieces[oldPos] = [];
-        } else if (!sizesOK && topMove) {
-          console.log("Move that TOP Piece(s)!");
-          tmpStack = pieces[oldPos].slice(topMoveElev);
-          moveHistory.push(["top", oldPos, tmpStack, targetPos]);
-          moveHist.push(["t", oldPos, targetPos]);
-          pieces[oldPos] = pieces[oldPos].splice(0,topMoveElev);
-          pieces[targetPos] = pieces[targetPos].concat(tmpStack);                       
+    function SetPyramidColors(pallete) {
+      console.log("SetPyramidColors("+pallete+")");
+      if (pallete == 0) {
+        return;
+      }
+      if (pallete == "custom") {
+        document.getElementById("customStashColorPickerDiv").style.display="";
+        if (customStashColor.length == 0) {
+          for (var p=1; p<=5; p++) {
+            document.getElementById("customStashColorPicker"+p).value=pyramidColors[p];
+          }
+          for (var c=1; c<=5; c++) {
+            tmpCheck = false;
+            if (pyramidColors[5+c] == "#ffffff") {
+              tmpCheck = true;
+            }
+            document.getElementById("customStashPipColorPicker"+c).checked = tmpCheck;
+          }
+        } else {
+          for (var p=1; p<=5; p++) {
+            document.getElementById("customStashColorPicker"+p).value=customStashColor[p];
+          }
+          for (var c=1; c<=5; c++) {
+            tmpCheck = false;
+            if (customStashColor[5+c] == "#ffffff") {
+              tmpCheck = true;
+            }
+            document.getElementById("customStashPipColorPicker"+c).checked = tmpCheck;
+          }
+          pyramidColors=[...customStashColor];
         }
-        DisplayPieces();
-        ClearCellHighlights();
-        selectedCell = [-1, -1];
-        clickMode = "none";
       } else {
-        console.log("Colors: "+colorsOK+", Sizes: "+sizesOK+", Orthogonal: "+orthogOK+"/ Path: "+pathOK);
-        
-        selectedCell = [targetCol, targetRow];
-        clickMode = "move";
-        SetCellHighlight(targetCol, targetRow);
+        document.getElementById("customStashColorPickerDiv").style.display="none";
+        pyramidColors=[...stashColors[pallete]];
+        console.log("SetPyramidColors("+pallete+") - "+stashColors[pallete]);
+      }
+      for (r=1; r<=5; r++) {
+        adjustCSSRules('.icon-two-part.style'+r, '--color-1: '+pyramidColors[r]);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-1: '+pyramidColors[r]);
+        var tmpPipColor = "#000000";
+        if (pyramidColors[r+5] !== undefined) {
+          tmpPipColor = pyramidColors[r+5];
+        } else {
+          pyramidColors[r+5] = tmpPipColor;
+        }
+        adjustCSSRules('.icon-two-part.style'+r, '--color-2: '+tmpPipColor);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-2: '+tmpPipColor);
+        var tmpPyramidStroke = "#000000";
+        if (pyramidColors[r+10] !== undefined) {
+          tmpPyramidStroke = pyramidColors[r+10];
+        } else {
+          pyramidColors[r+10] = tmpPyramidStroke;
+        }
+        adjustCSSRules('.icon-two-part.style'+r, '--color-3: '+tmpPyramidStroke);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-3: '+tmpPyramidStroke);
+        var tmpPipStroke = "#000000";
+        if (pyramidColors[r+15] !== undefined) {
+          tmpPipStroke = pyramidColors[r+15];
+        } else {
+          pyramidColors[r+15] = tmpPipStroke;
+        }
+        adjustCSSRules('.icon-two-part.style'+r, '--color-4: '+tmpPipStroke);
+        adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-4: '+tmpPipStroke);
       }
     }
-  }
-
-  function GenerateHumanReadableHistory() {
-    hrHist = "";
-    for (h=0; h<moveHist.length; h++) {
-      hrHist += (h+1)+": ";
-      tmpCol1 = moveHist[h][1] % boardWidth;
-      tmpRow1 = Math.floor(moveHist[h][1]/boardWidth)+1;
-      tmpCol2 = moveHist[h][2] % boardWidth;
-      tmpRow2 = Math.floor(moveHist[h][2]/boardWidth)+1;
-      if (moveHist[h][0] == "m") {
-        hrHist += "Move ";
-        hrHist += colNames[tmpCol1]+rowNames[tmpRow1]+" to ";
-        hrHist += colNames[tmpCol2]+rowNames[tmpRow2];
+    
+    function SetBoardColors(pallete) {
+      if (pallete == 0) {
+        return;
       }
-      if (moveHist[h][0] == "t") {
-        hrHist += "Top of ";
-        hrHist += colNames[tmpCol1]+rowNames[tmpRow1]+" to ";
-        hrHist += colNames[tmpCol2]+rowNames[tmpRow2];
+      if (pallete == "custom") {
+        document.getElementById("customBoardColorPickerDiv").style.display="";
+        if (customBoardColor.length == 0) {
+          // No custom color has been specified, use the default
+          document.getElementById("customBoardColorPicker0").value=fillColors[0];
+          document.getElementById("customBoardColorPicker1").value=fillColors[1];
+        } else {
+          // A custom color was specified, use it.
+          document.getElementById("customBoardColorPicker0").value=customBoardColor[0];
+          document.getElementById("customBoardColorPicker1").value=customBoardColor[1];
+          fillColors=[...customBoardColor];
+        }
+      } else {
+        // Not using custom colors, use the spcified color pallete
+        document.getElementById("customBoardColorPickerDiv").style.display="none";
+        fillColors = [...boardColors[pallete]];
       }
-      if (moveHist[h][0] == "s") {
-        hrHist += "Slide ";
-        hrHist += colNames[tmpCol1]+rowNames[tmpRow1];
-      }
-      if (moveHist[h][0] == "b") {
-        hrHist += "Bank ";
-        hrHist += colNames[tmpCol1]+rowNames[tmpRow1];
-      }
-      if (moveHist[h][0] == "w") {
-        hrHist += "Swap ";
-        hrHist += colNames[tmpCol1]+rowNames[tmpRow1]+" with ";
-        hrHist += colNames[tmpCol2]+rowNames[tmpRow2];
-      }
-      hrHist += "\r\n";
+      console.log("SetBoardColors("+pallete+") - "+fillColors[2]);
+      adjustCSSRules('.boardCellClass0', 'fill: '+fillColors[0]);
+      adjustCSSRules('.boardCellClass1', 'fill: '+fillColors[1]);
     }
-    return(hrHist);
-  }
     
-//https://stackoverflow.com/questions/61461518/javascript-how-prevent-dblclick-double-click-to-also-fire-a-single-click-even
-var pendingClick;
-var clicked = 0;
-var time_dbclick = 300 // 300ms
+    function AddCellHighlight(col, row) {
+      // Highlight a cell
+      console.log("AddCellHighlight()");
+      var hRect = document.createElementNS(svgns, "rect");
+      hRect.id = "cellHighlight";
+      hRect.setAttribute("x", (col*cellWidth)+cellWidth*0.05);
+      hRect.setAttribute("y", (row*cellHeight)+cellHeight*0.05);
+      hRect.setAttribute("width", cellWidth*0.9);
+      hRect.setAttribute("height", cellHeight*0.9);
+      hRect.setAttribute("fill", "#ffffff");
+      hRect.setAttribute("fill-opacity", 0.0);
+      hRect.setAttribute("stroke", "pink");
+      hRect.setAttribute("stroke-width", cellWidth*0.1);
+      board.appendChild(hRect);
+      
+    }
 
-function myclick(event){
-  clicked++;
-  clearTimeout(pendingClick)
-  if(clicked >= 2){
-    boardClicked(event, 2);
-    clicked = 0;
-  } else {
-    pendingClick = setTimeout(() => {
-      console.log('One click!');
-      boardClicked(event, 1);
-      clicked = 0;
-    }, time_dbclick);
-  }
-}
-
-  const canvasPieces = document.getElementById('canvasAnim');
-  canvasPieces.addEventListener('click', function(event) {
-    myclick(event);
-    
-    var c = document.getElementById('canvasAnim');
-    const rect = c.getBoundingClientRect();
-    mouseX = event.clientX - rect.left;
-    mouseY = event.clientY - rect.top;
-    
-    //mouseX = event.clientX - rect.left;
-    //mouseY = event.clientY;
-    //ball.dx = (ball.x - mouseX) / stepWidthFactor * -10;
-    //ball.dy = (ball.y - mouseY) / stepWidthFactor * -10;
-  }, false);
-
-
-  const bankDiv = document.getElementById('bank');
-  document.addEventListener('click', event => {
-    const isClickInside = canvasPieces.contains(event.target)
-    const isClickInside2 = bankDiv.contains(event.target)
-    if (!isClickInside && !isClickInside2) {
-      // The click was outside of canvasPieces
+    function SetCellHighlight(col, row) {
+      // Clear the cell highlighting and highlight a specific cell
       ClearCellHighlights();
-      selectedCell = [-1, -1];
-      clickMode = "none";     
+      AddCellHighlight(col, row);
     }
-  })
-  
-// http://stackoverflow.com/questions/11076975/insert-text-into-textarea-at-cursor-position-javascript
-function insertAtCursor(myField, myValue) {
-    //IE support
-    if (document.selection) {
-        myField.focus();
-        sel = document.selection.createRange();
-        sel.text = myValue;
-    }
-    //MOZILLA and others
-    else if (myField.selectionStart || myField.selectionStart == '0') {
-        var startPos = myField.selectionStart;
-        var endPos = myField.selectionEnd;
-        myField.value = myField.value.substring(0, startPos)
-            + myValue
-            + myField.value.substring(endPos, myField.value.length);
-        myField.selectionStart = startPos + myValue.length;
-        myField.selectionEnd = startPos + myValue.length;
-        myField.blur();
-    } else {
-        myField.value += myValue;
-        myField.blur();
-    }
-}
-  
-  //https://stackoverflow.com/questions/6620393/is-it-possible-to-alter-a-css-stylesheet-using-javascript-not-the-style-of-an
-  function adjustCSSRules(selector, props, sheets){
-  // get stylesheet(s)
-  if (!sheets) sheets = [...document.styleSheets];
-  else if (sheets.sup){    // sheets is a string
-    let absoluteURL = new URL(sheets, document.baseURI).href;
-    sheets = [...document.styleSheets].filter(i => i.href == absoluteURL);
-    }
-  else sheets = [sheets];  // sheets is a stylesheet
 
-  // CSS (& HTML) reduce spaces in selector to one.
-  selector = selector.replace(/\s+/g, ' ');
-  const findRule = s => [...s.cssRules].reverse().find(i => i.selectorText == selector)
-  let rule = sheets.map(findRule).filter(i=>i).pop()
-
-  const propsArr = props.sup
-    ? props.split(/\s*;\s*/).map(i => i.split(/\s*:\s*/)) // from string
-    : Object.entries(props);                              // from Object
-
-  if (rule) for (let [prop, val] of propsArr){
-    // rule.style[prop] = val; is against the spec, and does not support !important.
-    rule.style.setProperty(prop, ...val.split(/ *!(?=important)/));
-    }
-  else {
-    sheet = sheets.pop();
-    if (!props.sup) props = propsArr.reduce((str, [k, v]) => `${str}; ${k}: ${v}`, '');
-    sheet.insertRule(`${selector} { ${props} }`, sheet.cssRules.length);
-    }
-  }
-  
-    
-  function download(){
-    var download = document.getElementById("download");
-    var image = document.getElementById("canvasBoard").toDataURL("image/png")
-      .replace("image/png", "image/octet-stream");
-    download.setAttribute("href", image);
-    download.setAttribute("download",seed+".png");
-  }
-
-  function enterKeySeed(e) {
-      //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
-      if (e.keyCode == 13) {
-          SeedGame();
-          return false;
+    function ClearCellHighlights() {
+      // Clear all highlighting of cells on the board
+      var tmp = document.getElementById("cellHighlight");
+      if (tmp !== null) {
+        tmp.remove();
       }
-  }
-
-
-  const canvas = document.getElementById("canvasBoard");
-  // load the "PyramidLove" font
-  const fontFile = new FontFace(
-    "PyramidLove",
-    "url(Pyramid-Love-3.1.woff)",
-  );
-  document.fonts.add(fontFile);
-
-  fontFile.load().then(
-    () => {
-      // font loaded successfully!
-      NewGame();
-    },
-    (err) => {
-      console.error(err);
-    },
-  );
-
-  function setDropdowns() {
-    document.getElementById("stashSelector").innerHTML="";
-    for (o=0; o<stashColors.length; o++) {
-      var tmpOpt = document.createElement("option");
-      tmpOpt.value = o;
-      tmpOpt.innerText = stashColors[o][0];
-      document.getElementById("stashSelector").appendChild(tmpOpt);
     }
-    var tmpOpt = document.createElement("option");
-    tmpOpt.value = "custom";
-    tmpOpt.innerText = "Custom";
-    document.getElementById("stashSelector").appendChild(tmpOpt);
-
-    document.getElementById("backgroundSelector").innerHTML="";
     
-    for (o=0; o<boardColors.length; o++) {
-      var tmpOpt = document.createElement("option");
-      tmpOpt.value = o;
-      tmpOpt.innerText = boardColors[o][2];
-      document.getElementById("backgroundSelector").appendChild(tmpOpt);
-    }
-    var tmpOpt = document.createElement("option");
-    tmpOpt.value = "custom";
-    tmpOpt.innerText = "Custom";
-    document.getElementById("backgroundSelector").appendChild(tmpOpt);
-  }
+    function MovePyramid(targetCol, targetRow) {
+      // Has most of the logic for checking if you can move a piece on the board.
+      var targetPos = (targetRow * boardWidth)+targetCol;
+      var oldCol = selectedCell[0];
+      var oldRow = selectedCell[1];
+      var oldPos = (oldRow * boardWidth)+oldCol;
+      var oldCell = cells[oldCol][oldRow];
+      var tarCell = cells[targetCol][targetRow];
+      console.log("MovePyramid: from: "+oldPos+" to: "+targetPos);
 
-  function makeDropdown() {
-    // From https://www.w3schools.com/howto/howto_custom_select.asp
-    var d=document.getElementsByClassName("select-selected").length;
-    for (r=0; r<d; r++) {
-      document.getElementsByClassName("select-selected")[0].remove();
-    }
-    var x, i, j, l, ll, selElmnt, a, b, c;
-    /* Look for any elements with the class "custom-select": */
-    x = document.getElementsByClassName("custom-select");
-    l = x.length;
-    for (i = 0; i < l; i++) {
-      selElmnt = x[i].getElementsByTagName("select")[0];
-      ll = selElmnt.length;
-      /* For each element, create a new DIV that will act as the selected item: */
-      a = document.createElement("DIV");
-      a.setAttribute("class", "select-selected");
-      a.id = selElmnt.id+"Div";
-      a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
-      x[i].appendChild(a);
-      /* For each element, create a new DIV that will contain the option list: */
-      b = document.createElement("DIV");
-      b.setAttribute("class", "select-items select-hide");
-      for (j = 1; j < ll; j++) {
-        /* For each option in the original select element,
-        create a new DIV that will act as an option item: */
-        c = document.createElement("DIV");
-        c.innerHTML = selElmnt.options[j].innerHTML;
-        c.addEventListener("click", function(e) {
-            /* When an item is clicked, update the original select box,
-            and the selected item: */
-            var y, i, k, s, h, sl, yl;
-            s = this.parentNode.parentNode.getElementsByTagName("select")[0];
-            sl = s.length;
-            h = this.parentNode.previousSibling;
-            for (i = 0; i < sl; i++) {
-              if (s.options[i].innerHTML == this.innerHTML) {
-                s.selectedIndex = i;
-                h.innerHTML = this.innerHTML;
-                y = this.parentNode.getElementsByClassName("same-as-selected");
-                yl = y.length;
-                for (k = 0; k < yl; k++) {
-                  y[k].removeAttribute("class");
-                }
-                this.setAttribute("class", "same-as-selected");
+      // Set the test variables to false, when a test passes it's set to true
+      var colorsOK = false;
+      var sizesOK = false;
+      var topMove = false;
+      var topMoveElev = -1;
+      var orthogOK = false;
+      var pathOK = false;
+      var slide = false;
+
+      if (tarCell.length == 0) {
+        //Target cell is empty, are we sliding?
+        console.log("Target cell empty, slide?");
+        if ((oldCol == targetCol) && (oldRow > targetRow)) {
+          console.log("Columns match & target is above.");
+          if (oldRow == targetRow+1) {
+            //Target is directly above
+            console.log("Slide target immediately above.");
+            slide = true;
+          } else {
+            console.log("Slide target in same column but not adjacent");
+            var checkPath = true;
+            //Cells are 2 or more row apart with the target above
+            for (r=targetRow+1; r<oldRow; r++) {
+              if (cells[targetCol][r].length != 0) {
+                checkPath = false;
                 break;
               }
             }
-            h.click();
-            DropClicked(s.id);
-        });
-        b.appendChild(c);
-      }
-      x[i].appendChild(b);
-      a.addEventListener("click", function(e) {
-        /* When the select box is clicked, close any other select boxes,
-        and open/close the current select box: */
-        e.stopPropagation();
-        closeAllSelect(this);
-        this.nextSibling.classList.toggle("select-hide");
-        this.classList.toggle("select-arrow-active");
-      });
-    }
-  }
-
-  function closeAllSelect(elmnt) {
-    /* A function that will close all select boxes in the document,
-    except the current select box: */
-    var x, y, i, xl, yl, arrNo = [];
-    x = document.getElementsByClassName("select-items");
-    y = document.getElementsByClassName("select-selected");
-    xl = x.length;
-    yl = y.length;
-    for (i = 0; i < yl; i++) {
-      if (elmnt == y[i]) {
-        arrNo.push(i)
+            slide = checkPath;
+          }
+          console.log("Slide?: "+slide);
+        }
+        if (slide) {
+          console.log("We're Sliding!");
+          var slideTarget = -1;
+          for (var r=targetRow; r>=0; r--) {
+            if (cells[targetCol][r].length == 0) {
+              slideTarget = r;
+            } else {
+              break;
+            }
+          }
+          console.log("SlideTarget: "+slideTarget);
+          slideDistance = oldRow-slideTarget;
+          console.log("Distance: "+slideDistance);
+          tmpHist = [];
+          for (var r=oldRow; r<boardHeight; r++) {
+            tmpPos = (r * boardWidth)+targetCol;
+            if (cells[targetCol][r].length > 0) {
+              tmpHist.push([[targetCol,r], cells[targetCol][r], [targetCol,r-slideDistance]]);
+              cells[targetCol][r-slideDistance] = cells[targetCol][r];
+              for (var n=0; n<cells[targetCol][r-slideDistance].length; n++) {
+                //cells[targetCol][r-slideDistance][n].row = r-slideDistance;
+                piecesWithIds[cells[targetCol][r-slideDistance][n]].row = r-slideDistance;
+              }
+              cells[targetCol][r] = [];
+            } else {
+              break;
+            }
+          }
+          if (record) {
+            moveHistory.push(["slide", tmpHist]);
+            moveHistory2.push(JSON.parse(JSON.stringify(["slide", tmpHist])));
+          }
+          //moveHist.push(["s", oldPos, (oldPos-(slideDistance*boardWidth))]);
+          UpdatePiecesOnBoard();
+          ClearCellHighlights();
+          selectedCell = [-1, -1];
+          clickMode = "none";
+        }
       } else {
-        y[i].classList.remove("select-arrow-active");
+        //There is something in the target cell, let's check if we can stack on it
+        if (piecesWithIds[oldCell[0]].color == piecesWithIds[tarCell[0]].color) {
+          //The colors of the old and target pieces match
+          console.log("Colors Match");
+          colorsOK = true;
+        }
+        if (piecesWithIds[oldCell[0]].size+1 == piecesWithIds[tarCell[tarCell.length-1]].size) {
+          //The size of the old piece is 1 smaller than the top target piece
+          console.log("Old piece is 1 smaller than target piece");
+          sizesOK = true;
+        } else {
+          if (oldCell.length > 1) {
+            //The old tower has several pieces, check if we can move 1 or 2 of them instead of whole stack.
+            console.log("Old stack has more than 1 piece");
+            for (p=1; p<oldCell.length; p++) {
+              console.log(p);
+              if (piecesWithIds[oldCell[p]].size+1 == piecesWithIds[tarCell[tarCell.length-1]].size) {
+                console.log("We can do a topMove");
+                topMove = true;
+                topMoveElev = p;
+              }
+            }
+          }
+        }
+        if ((oldCol == targetCol) || (oldRow == targetRow)) {
+          //The old and target cells share a column or row
+          orthogOK = true;
+
+          if (oldCol == targetCol) {
+            if ((oldRow == targetRow+1) || (oldRow == targetRow-1)) {
+              //Cells are directly above/below each other
+              pathOK = true;
+            } else {
+              console.log("Cells in same column but not adjacent");
+              var checkPath = true;
+              if (targetRow > oldRow) {
+                //Cells are 2 or more rows apart with the target bellow
+                console.log("Target cell bellow");
+                for (r=oldRow+1; r<targetRow; r++) {
+                  //console.log(r);
+                  if (cells[targetCol][r].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              } else {
+                //Cells are 2 or more rows apart with the target above
+                console.log("Target cell above");
+                for (r=targetRow+1; r<oldRow; r++) {
+                  if (cells[targetCol][r].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              }
+              pathOK = checkPath;
+            }
+          }
+          if (oldRow == targetRow) {
+            if ((oldCol == targetCol+1) || (oldCol == targetCol-1)) {
+              //Cells are side by side
+              pathOK = true;
+            } else {
+              console.log("Cells on same row but not adjacent");
+              var checkPath = true;
+              if (targetCol > oldCol) {
+                //Cells are 2 or more columns apart with the target on the right
+                console.log("Target cell on right");
+                for (c=oldCol+1; c<targetCol; c++) {
+                  //console.log(c);
+                  if (cells[c][oldRow].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              } else {
+                //Cells are 2 or more columns apart with the target on the left
+                console.log("Target cell on left");
+                for (c=targetCol+1; c<oldCol; c++) {
+                  if (cells[c][oldRow].length != 0) {
+                    checkPath = false;
+                    break;
+                  }
+                }
+              }
+              pathOK = checkPath;
+            }
+          }
+        }
+
+        if (colorsOK && orthogOK && pathOK && (sizesOK || topMove)) {
+          if (sizesOK && !topMove) {
+            console.log("Move that Piece(s)!");
+            if (record) {
+              moveHistory.push(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]]);
+              moveHistory2.push(JSON.parse(JSON.stringify(["move", [oldCol, oldRow], cells[oldCol][oldRow], [targetCol, targetRow]])));
+            }
+            //moveHist.push(["m", oldPos, targetPos]);
+            for (o=0; o<oldCell.length; o++) {
+              //cells[oldCol][oldRow][o].col = tarCell[0].col;
+              piecesWithIds[cells[oldCol][oldRow][o]].col = piecesWithIds[tarCell[0]].col;
+              //cells[oldCol][oldRow][o].row = tarCell[0].row;
+              piecesWithIds[cells[oldCol][oldRow][o]].row = piecesWithIds[tarCell[0]].row;
+            }
+            cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(cells[oldCol][oldRow]);
+            for (var e=0; e<cells[targetCol][targetRow].length; e++) {
+              piecesWithIds[cells[targetCol][targetRow][e]].elev=e;
+            }
+            cells[oldCol][oldRow] = [];
+          } else if (!sizesOK && topMove) {
+            console.log("Move that TOP Piece(s)!");
+            var tmpStack = cells[oldCol][oldRow].slice(topMoveElev);
+            console.log(tmpStack);
+            if (record) {
+              moveHistory.push(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]]);
+              moveHistory2.push(JSON.parse(JSON.stringify(["top", [oldCol, oldRow], tmpStack, [targetCol, targetRow]])));
+            }
+            cells[oldCol][oldRow] = cells[oldCol][oldRow].splice(0,topMoveElev);
+            cells[targetCol][targetRow] = cells[targetCol][targetRow].concat(tmpStack);                       
+            for (var e=0; e<cells[targetCol][targetRow].length; e++) {
+              piecesWithIds[cells[targetCol][targetRow][e]].elev=e;
+              piecesWithIds[cells[targetCol][targetRow][e]].col=targetCol;
+              piecesWithIds[cells[targetCol][targetRow][e]].row=targetRow;
+            }
+          }
+          UpdatePiecesOnBoard();
+          ClearCellHighlights();
+          selectedCell = [-1, -1];
+          clickMode = "none";
+        } else {
+          console.log("Colors: "+colorsOK+", Sizes: "+sizesOK+", Orthogonal: "+orthogOK+"/ Path: "+pathOK);
+
+          selectedCell = [targetCol, targetRow];
+          clickMode = "move";
+          SetCellHighlight(targetCol, targetRow);
+        }
       }
     }
-    for (i = 0; i < xl; i++) {
-      if (arrNo.indexOf(i)) {
-        x[i].classList.add("select-hide");
+    
+    function InitialPiecesOnBoard() {
+      // Loop through the bag and add the pieces to the board, should only run once
+      var t0 = performance.now();
+      var tmpParents = [null, pawns, drones, queens];
+      for (p=0; p<bag.length; p++) {
+        if (bag[p].length > 0) {
+          var tmpShape = pieceSizeNames[bag[p].toString()[1]];
+          var tmpId = "piece_"+p;
+          var tmpCol = p%boardWidth;
+          var tmpX = (tmpCol*cellWidth)+((cellWidth-pieceSizes[bag[p].toString()[1]])/2);
+          var tmpRow = Math.floor(p/boardWidth)+1;
+          var tmpY = (tmpRow*cellHeight)+((cellHeight-pieceSizes[bag[p].toString()[1]])/2);
+          var tmpSize = pieceSizes[bag[p].toString()[1]];
+          var tmpStyle = "style"+bag[p].toString()[0];
+          var tmpParent = tmpParents[bag[p].toString()[1]];
+          AddSVG(tmpParent, tmpShape, tmpId, tmpX, tmpY, tmpSize, tmpSize, tmpStyle);
+          piecesWithIds[tmpId] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
+          //cells[tmpCol][tmpRow] = {"id": tmpId, "col": tmpCol, "row": tmpRow, "color": Number(bag[p].toString()[0]), "size": Number(bag[p].toString()[1]), "elev": 0, "bank": false};
+        }
+      }
+      var t1 = performance.now();
+      console.log(`InitialPiecesOnBoard() took ${t1 - t0} milliseconds.`);
+    }
+    
+    function UpdatePiecesOnBoard() {
+      // Update the X&Y values for the pieces based on where they are and how they're stacked.
+      var t0 = performance.now();
+      for (var key in piecesWithIds) {
+        if (piecesWithIds.hasOwnProperty(key)) {
+          if (!piecesWithIds[key].bank) {
+            var tmpX = (piecesWithIds[key].col*cellWidth)+((cellWidth-pieceSizes[piecesWithIds[key].size])/2);
+            //var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10+((cells[piecesWithIds[key].col][piecesWithIds[key].row].length-1)*3);
+            var tmpY = (piecesWithIds[key].row*cellHeight)+((cellHeight-pieceSizes[piecesWithIds[key].size])/2)-piecesWithIds[key].elev*10+((cells[piecesWithIds[key].col][piecesWithIds[key].row].length-1)*3);
+            var tmpPiece = document.getElementById(key);
+            tmpPiece.setAttribute("x", tmpX);
+            tmpPiece.setAttribute("y", tmpY);
+            //console.log(key+" "+piecesWithIds[key].col+" "+piecesWithIds[key].row+" "+piecesWithIds[key].size);
+            //console.log(tmpX+" "+tmpY);
+          }
+        }
+      }
+      document.getElementById("historyBoxText").value = ReadableHistory();
+      tmpMoves = "Moves: " + moveHistory.length;
+      document.getElementById("moves-text").innerHTML = tmpMoves;
+      var t1 = performance.now();
+      console.log(`UpdatePiecesOnBoard() took ${t1 - t0} milliseconds.`);
+    }
+  
+    function UpdateBank() {
+      console.log("UpdateBank()");
+      if (bank.length < 15) {
+        score = bank.length;
+      } else {
+        score = bank.length + 2 - swapsUsed;
+      }
+      document.getElementById("score-text").innerHTML="Score: "+score;
+      var tmpGrid = [null, 0, 0, 0, 0, 0];
+      var tmpSwap1 = false;
+      var tmpSwap2 = false;
+      var tmpHtml = "Score: "+score+"<br/>";
+      for (b=0; b<bank.length; b++) {
+        var tmpColorNum = piecesWithIds[bank[b][0]].color;
+        tmpGrid[tmpColorNum]++;
+        var bOffsetX = [null, 5, 2, 0];
+        var bOffsetY = [null, -14, -8, 0];
+        var bX = 270;
+        var bY = 50;
+        var bSize = [null, 20, 26, 30];
+        for (var p=0; p<bank[b].length; p++) {
+          tmpPiece = document.getElementById(piecesWithIds[bank[b][p]].id);
+          tmpX = bX+((piecesWithIds[bank[b][p]].color-1)*25)+bOffsetX[piecesWithIds[bank[b][p]].size];
+          tmpY = bY+((tmpGrid[piecesWithIds[bank[b][p]].color]-1)*50)+bOffsetY[piecesWithIds[bank[b][p]].size];
+          tmpPiece.setAttribute("x", tmpX);
+          tmpPiece.setAttribute("y", tmpY);
+          tmpPiece.setAttribute("width", bSize[piecesWithIds[bank[b][p]].size]);
+          tmpPiece.setAttribute("height", bSize[piecesWithIds[bank[b][p]].size]);
+          //queens w&h: 30
+          //Color1 Queen: x:270 y:50  Add y50 for 2nd and 3rd rows
+          //Color5 Queen: x:370 y:50
+          //Drone w&h: 26
+          //Color5 Drone: x:372 y:42
+          //Pawn w&h: 20
+          //Color5 Pawn: x:375 y:36
+        }
+           
+      }
+      if (tmpGrid[1] >= 1 && tmpGrid[2] >= 1 && tmpGrid[3] >= 1 && tmpGrid[4] >= 1 && tmpGrid[5] >= 1) {
+        tmpSwap1 = true;
+      }
+      if (tmpGrid[1] >= 2 && tmpGrid[2] >= 2 && tmpGrid[3] >= 2 && tmpGrid[4] >= 2 && tmpGrid[5] >= 2) {
+        tmpSwap2 = true;
+      }
+      for (var s=1; s<=3; s++) {
+        var s1 = document.getElementById("SwapButton1");
+        var s2 = document.getElementById("SwapButton2");
+        var s1c = document.getElementById("SwapButton1Click");
+        var s2c = document.getElementById("SwapButton2Click");
+        if (s == 1) {
+          if (tmpSwap1 && swapsUsed < 1) {
+            s1.classList.add("swap-icon-available");
+            s1.classList.remove("swap-icon-unavailable");
+            s1.classList.remove("swap-icon-used");
+            s1c.style.display="block";
+          } else if (tmpSwap1 && swapsUsed >= 1) {
+            s1.classList.remove("swap-icon-available");
+            s1.classList.remove("swap-icon-unavailable");
+            s1.classList.add("swap-icon-used");
+            s1c.style.display="none";
+          } else {
+            s1.classList.remove("swap-icon-available");
+            s1.classList.add("swap-icon-unavailable");
+            s1.classList.remove("swap-icon-used");
+            s1c.style.display="none";
+          }
+        } else if (s == 2) {
+          if (tmpSwap2 && swapsUsed < 2) {
+            s2.classList.add("swap-icon-available");
+            s2.classList.remove("swap-icon-unavailable");
+            s2.classList.remove("swap-icon-used");
+            s2c.style.display="block";
+          } else if (tmpSwap2 && swapsUsed >= 2) {
+            s2.classList.remove("swap-icon-available");
+            s2.classList.remove("swap-icon-unavailable");
+            s2.classList.add("swap-icon-used");
+            s2c.style.display="none";
+          } else {
+            s2.classList.remove("swap-icon-available");
+            s2.classList.add("swap-icon-unavailable");
+            s2.classList.remove("swap-icon-used");
+            s2c.style.display="none";
+          }
+        }
       }
     }
-  }
 
-  function invertColor(hex, bw) {
-    //From: https://stackoverflow.com/questions/35969656/how-can-i-generate-the-opposite-color-according-to-current-color
-    console.log("invertColors("+hex+", "+bw+");");
-    if (hex.indexOf('#') === 0) {
-      hex = hex.slice(1);
+    function StartSwap(btn) {
+      if (playbackMode) {
+        return;
+      }
+      console.log("StartSwap()");
+      if (clickMode == "swap") {
+        //Cancel the swap
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        document.getElementById("SwapButton"+btn+"Background").classList.remove("swap-border-animated");
+        setTimeout(() => {
+          clickMode = "none";
+        }, 200);
+      } else {
+        //Start the swap
+        ClearCellHighlights();
+        selectedCell = [-1, -1];
+        document.getElementById("SwapButton"+btn+"Background").classList.add("swap-border-animated");
+        setTimeout(() => {
+          clickMode = "swap";
+        }, 200);
+      }
     }
-    // convert 3-digit hex to 6-digits.
-    if (hex.length === 3) {
-      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+   
+    function NewGame(seeder=null, type=null) {
+      if (seeder !== null) {
+        console.log("seeder not null");
+        seed = seeder;
+      } else {
+        if (type == "random") {
+          console.log("seeder null, type random");
+          seed=Math.floor(Math.random()*100000).toString();
+        } else if (type == "seed") {
+        console.log("seeder null, type seed");
+          seed=document.getElementById("seedbox").value.toString();
+        }
+      }
+      document.getElementById("seedbox").value=seed;
+      console.log(seed);
+      //moveHist = [];
+      moveHistory = [];
+      clickMode = "none";
+      selectedCell = [-1, -1];
+      swap1 = [-1, -1];
+      swapsUsed = 0;
+      bank = [];
+      score = 0;
+      document.getElementById("SwapButton1Background").classList.remove("swap-border-animated");
+      document.getElementById("SwapButton2Background").classList.remove("swap-border-animated");
+      UpdateBank();
+      bag = [ [11], [11], [11], [12], [12], [12], [13], [13], [13], [21], [21], [21], [22], [22], [22], [23], [23], [23], [31], [31], [31], [32], [32], [32], [33], [33], [33], [41], [41], [41], [42], [42], [42], [43], [43], [43], [51], [51], [51], [52], [52], [52], [53], [53], [53] ];
+      Math.seedrandom(seed);
+      var result = ShuffleBag();
+      if (result) {
+        UpdatePiecesOnBoard();
+      } else {
+        alert("This seed generates too many errors. Try another.");
+      }
     }
-    if (hex.length !== 6) {
-      throw new Error('Invalid HEX color.');
-    }
-    var r = parseInt(hex.slice(0, 2), 16),
-        g = parseInt(hex.slice(2, 4), 16),
-        b = parseInt(hex.slice(4, 6), 16);
-    if (bw) {
-      // https://stackoverflow.com/a/3943023/112731
-      return (r * 0.299 + g * 0.587 + b * 0.114) > 186
-        ? '#000000'
-        : '#FFFFFF';
-    }
-    // invert color components
-    r = (255 - r).toString(16);
-    g = (255 - g).toString(16);
-    b = (255 - b).toString(16);
-    // pad each with zeros and return
-    console.log("invertColors return #" + padZero(r) + padZero(g) + padZero(b));
-    return "#" + padZero(r) + padZero(g) + padZero(b);
-  }
-  function padZero(str, len) {
-    len = len || 2;
-    var zeros = new Array(len).join('0');
-    return (zeros + str).slice(-len);
-  }
-
-  function saveSettings() {
-    window.localStorage.setItem("savedStashColors", JSON.stringify(stashColors));
-    window.localStorage.setItem("savedBoardColors", JSON.stringify(boardColors));
-    tmpSettings = {"pyramidColors": pyramidColors,
-                    "fillColors": fillColors,
-                    //"styleDropShadow": styleDropShadow,
-                    //"styleShadowInverted": styleShadowInverted,
-                    //"styleOutline": styleOutline,
-                    //"styleOutlineInverted": styleOutlineInverted
-                  };
-    window.localStorage.setItem("savedSettings", JSON.stringify(tmpSettings));
-  }
-  
-  function loadSettings() {
-    var tmpStashColors=JSON.parse(window.localStorage.getItem("savedStashColors"));
-    if (tmpStashColors !== null) {
-      stashColors=tmpStashColors;
-    }
-    var tmpBoardColors=JSON.parse(window.localStorage.getItem("savedBoardColors"));
-    if (tmpBoardColors !== null) {
-      boardColors=tmpBoardColors;
-    }
-    var tmpSettings=JSON.parse(window.localStorage.getItem("savedSettings"));
-    console.log(tmpSettings);
-    if (tmpSettings !== null) {
-      pyramidColors = tmpSettings.pyramidColors;
-      fillColors = tmpSettings.fillColors;
-      //styleDropShadow = tmpSettings.styleDropShadow;
-      //styleShadowInverted = tmpSettings.styleShadowInverted;
-      //styleOutline = tmpSettings.styleOutline;
-      //styleOutlineInverted = tmpSettings.styleOutlineInverted;
-      //setStyle("shadow", false);
-      //setStyle("shadowinverted", false);
-      //setStyle("outline", false);
-      //setStyle("outlineinverted", true);
-    }
-    setDropdowns();
-    makeDropdown();
-  }
-
     
-  
+    function UpdateCellValues(col, row, full=false) {
+      console.log("UpdateCellValues("+col+", "+row+")");
+      //Just set the col, row, and elev attributes of the piece to match where it is
+      for (var p=0; p<cells[col][row].length; p++) {
+        //cells[col][row][p].col = col;
+        //cells[col][row][p].row = row;
+        //cells[col][row][p].elev = p;
+        //piecesWithIds[cells[col][row][p].id].col = col;
+        //piecesWithIds[cells[col][row][p].id].row = row;
+        //piecesWithIds[cells[col][row][p].id].elev = p;
+        piecesWithIds[cells[col][row][p]].col = col;
+        piecesWithIds[cells[col][row][p]].row = row;
+        piecesWithIds[cells[col][row][p]].elev = p;
+        console.log(piecesWithIds[cells[col][row][p]].id);
+        if (full) {
+          //cells[col][row][p].bank = false;
+          piecesWithIds[cells[col][row][p]].bank = false;
+          //piecesWithIds[cells[col][row][p].id].bank = false;
+          var tmpPiece = document.getElementById(piecesWithIds[cells[col][row][p]].id);
+          tmpPiece.setAttribute("width", pieceSizes[piecesWithIds[cells[col][row][p]].size]);
+          tmpPiece.setAttribute("height", pieceSizes[piecesWithIds[cells[col][row][p]].size]);
+        }
+      } 
+    }
     
-
-  loadSettings();
-  /* If the user clicks anywhere outside the select box,
-  then close all select boxes: */
-  //document.addEventListener("click", closeAllSelect); 
-  document.addEventListener("click", function (e) {
-    closeAllSelect();
-  })
-
-/*
-  var canvasA = document.getElementById("canvasAnim");
-  var ctx = canvasA.getContext("2d");
-  var stepWidthFactor = 200;
-  var mouseX, mouseY;
-  var targetX, targetY;
-    function background() {
-      //ctx.fillStyle = "#505050";
-      //ctx.fillRect(0, 0, canvasA.width, canvasA.height);
-      ctx.clearRect(0, 0, canvasA.width, canvasA.height);
-  }
-  var ball = {
-      x: 100,
-      y: 100,
-      dx: 0,
-      dy: 0,
-      draw: function () {
-        ctx.fillStyle = "#F00000";
-
-        ctx.font = cellHeight*fontSizeRatio+'px PyramidLove';
-        ctx.textBaseline = 'top';
-        ctx.fillText  ('\ue925', this.x, this.y);
-        //ctx.fillText  ('\ue925', ((cellWidth-ctx.measureText('\ue925').width)/2)+cellWidth*targetX, (cellHeight*((1-fontSizeRatio)/2))+cellHeight*targetY);
+    function UndoLast(src) {
+      if (src == "button" && playbackMode) {
+        return;
+      }
+      var step = null;
+      console.log("UndoLast()");
+      if (moveHistory.length <= 0) {
+        console.log("No history to undo.");
+        return;
+      }
+      var oldCol, oldRow, tarCol, tarRow, tmpPieces, oldPieces, tarPieces, tmpIndex;
+      if (step === null) {
+        var tmpMove = moveHistory2.pop();
+        moveHistory.pop();
+        //moveHist.pop();
+      } else {
+        var tmpMove = moveHistory2[step];
+      }
+      if (tmpMove[0] == "move" || tmpMove[0] == "top") {
+        //moveHistory format: [ "move/top", [fromCol, fromRow], [pieces], [toCol, toRow] ]
+        console.log("Undo: move");
+        console.log("tmpMove: "+JSON.stringify(tmpMove));
+        oldCol = tmpMove[1][0];
+        oldRow = tmpMove[1][1];
+        tmpPieces = tmpMove[2];
+        console.log("tmpPieces: "+JSON.stringify(tmpPieces));
+        tarCol = tmpMove[3][0];
+        tarRow = tmpMove[3][1];
+        tmpIndex = cells[tarCol][tarRow].length - tmpPieces.length;
+        console.log("tmpIndex: "+tmpIndex);
+        //Concat the contents of the old cell with the pieces moved
+        console.log("cells[old}: "+JSON.stringify(cells[oldCol][oldRow]));
+        cells[oldCol][oldRow] = cells[oldCol][oldRow].concat(tmpPieces);
+        console.log("cells[old]: "+JSON.stringify(cells[oldCol][oldRow]));
+        UpdateCellValues(oldCol, oldRow, true);
+        //Splice off the pieces from the target cell
+        console.log("cells[tar]: "+JSON.stringify(cells[tarCol][tarRow]));
+        cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,tmpIndex);
+        console.log("cells[tar]: "+JSON.stringify(cells[tarCol][tarRow]));
+        UpdateCellValues(tarCol, tarRow, true);
+      } else if (tmpMove[0] == "slide") {
+        //moveHistory format: [ "slide", [ [fromCol, fromRow], [pieces], [toCol, toRow] ] ]
+        //Basically the same as a "move" but with an array of moves to undo
+        for (var s=tmpMove[1].length-1; s>=0; s--) {
+          oldCol = tmpMove[1][s][0][0];
+          oldRow = tmpMove[1][s][0][1];
+          tmpPieces = tmpMove[1][s][1];
+          tarCol = tmpMove[1][s][2][0];
+          tarRow = tmpMove[1][s][2][1];
+          //Concat the contents of the old cell with the pieces moved
+          //pieces[tmpMove[1][s][0]] = pieces[tmpMove[1][s][0]].concat(tmpMove[1][s][1]);
+          cells[oldCol][oldRow] = cells[oldCol][oldRow].concat(tmpPieces);
+          UpdateCellValues(oldCol, oldRow, true);
+          //Splice off the pieces from the target cell
+          //pieces[tmpMove[1][s][2]] = pieces[tmpMove[1][s][2]].splice(0,pieces[tmpMove[1][s][2]].indexOf(tmpMove[1][s][1][0]));
+          cells[tarCol][tarRow] = cells[tarCol][tarRow].splice(0,cells[tarCol][tarRow].indexOf(tmpPieces[0]));
+          UpdateCellValues(tarCol, tarRow, true);
+        }
+      } else if (tmpMove[0] == "bank") {
+        //moveHistory format: [ "bank", [fromCol, fromRow], [pieces] ]
+        oldCol = tmpMove[1][0];
+        oldRow = tmpMove[1][1];
+        oldPieces = tmpMove[2];
+        cells[oldCol][oldRow] = bank[bank.length-1];
+        bank.pop();
+        UpdateCellValues(oldCol, oldRow, true);
+      } else if (tmpMove[0] == "swap") {
+        //moveHistory format: [ "swap", [fromCol, fromRow], [pieces], [toCol, toRow], [pieces] ]
+        oldCol = tmpMove[1][0];
+        oldRow = tmpMove[1][1];
+        oldPieces = tmpMove[2];
+        tarCol = tmpMove[3][0];
+        tarRow = tmpMove[3][1];
+        tarPieces = tmpMove[4];
+        //pieces[tmpMove[1]] = tmpMove[2];
+        //pieces[tmpMove[3]] = tmpMove[4];
+        cells[oldCol][oldRow] = oldPieces;
+        cells[tarCol][tarRow] = tarPieces;
+        UpdateCellValues(oldCol, oldRow);
+        UpdateCellValues(tarCol, tarRow);
+        swapsUsed--;
+      }
+      UpdateBank();
+      UpdatePiecesOnBoard();
+      ClearCellHighlights();
+      selectedCell = [-1, -1];
+      clickMode = "none";
+    }
+    
+    function ReadableHistory() {
+      var readable = seed+"_";
+      for (var h=0; h<moveHistory.length; h++) {
+        tmpMove = "";
+        if (moveHistory[h][0] == "move") {
+          tmpMove += "M-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          tmpMove += ">";
+          tmpMove += colNames[moveHistory[h][3][0]];
+          tmpMove += rowNames[moveHistory[h][3][1]];
+        } else if (moveHistory[h][0] == "top") {
+          tmpMove += "T-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          tmpMove += ">";
+          tmpMove += colNames[moveHistory[h][3][0]];
+          tmpMove += rowNames[moveHistory[h][3][1]];
+        } else if (moveHistory[h][0] == "bank") {
+          tmpMove += "B-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+        } else if (moveHistory[h][0] == "slide") {
+          tmpMove += "S-";
+          for (var s=0; s<1; s++) {
+            tmpMove += colNames[moveHistory[h][1][s][0][0]];
+            tmpMove += rowNames[moveHistory[h][1][s][0][1]];
+            tmpMove += ">";
+            tmpMove += colNames[moveHistory[h][1][s][2][0]];
+            tmpMove += rowNames[moveHistory[h][1][s][2][1]];
+          }
+        } else if (moveHistory[h][0] == "swap") {
+          tmpMove += "W-";
+          tmpMove += colNames[moveHistory[h][1][0]];
+          tmpMove += rowNames[moveHistory[h][1][1]];
+          tmpMove += ">";
+          tmpMove += colNames[moveHistory[h][3][0]];
+          tmpMove += rowNames[moveHistory[h][3][1]];
+        }
+        readable += tmpMove + ", ";
+      }
+      if (moveHistory.length == 0) {
+        readable = readable.slice(0,-1);
+      } else {
+        readable = readable.slice(0,-2);
+      }
+      return(readable);
+    }
+    
+    function History() {
+      if (showHistory) {
+        document.getElementById("historyBox").style.display = "none";
+        showHistory = false;
+      } else {
+        document.getElementById("historyBox").style.display = "";
+        showHistory = true;
+      }
+    }
+    
+    function PlaybackHistory(data) {
+      playbackMode = true;
+      document.getElementById("historyBox-LoadSave").style.display = "none";
+      document.getElementById("historyBox-Playback").style.display = "";
+      var tmpSeed = data.slice(0, data.indexOf("_"));
+      var tmpHistory = data.slice(data.indexOf("_")+1);
+      recordedHistory = tmpHistory.split(", ");
+      var tmpMoves = "";
+      for (var m=0; m<recordedHistory.length; m++) {
+        tmpMoves += "<div id='playbackStep-"+m+"' class='playbackSteps'>";
+        if (recordedHistory[m][0] == "M") {
+          tmpMoves += "Move ";
+          tmpMoves += recordedHistory[m].slice(2).replaceAll(">", " to ");
+        }
+        if (recordedHistory[m][0] == "T") {
+          tmpMoves += "Top ";
+          tmpMoves += recordedHistory[m].slice(2).replaceAll(">", " to ");
+        }
+        if (recordedHistory[m][0] == "S") {
+          tmpMoves += "Slide ";
+          tmpMoves += recordedHistory[m].slice(2, recordedHistory[m].indexOf(">"));
+          tmpMoves += " up";
+        }
+        if (recordedHistory[m][0] == "W") {
+          tmpMoves += "Swap ";
+          tmpMoves += recordedHistory[m].slice(2).replaceAll(">", " with ");
+        }
+        if (recordedHistory[m][0] == "B") {
+          tmpMoves += "Bank ";
+          tmpMoves += recordedHistory[m].slice(2).replaceAll(">", " to ");
+        }
+        tmpMoves += "</div>";
+      }
+      document.getElementById("playbackMoves").innerHTML = tmpMoves;
+      NewGame(tmpSeed);
+      historyPosition = 0;
+      //record = false;
+    }
+    
+    function ClosePlayback() {
+      document.getElementById("historyBox-LoadSave").style.display = "";
+      document.getElementById("historyBox-Playback").style.display = "none";
+      playing = false;
+      clearTimeout(histPlayTimeout);
+    }
         
-        //ctx.beginPath();
-        //ctx.arc(this.x, this.y, 30, 0, 2 * Math.PI);
-        //ctx.fill();
-        //ctx.stroke();
+    function HistoryStepForward() {
+      clearTimeout(histPlayTimeout);
+      if (recordedHistory[historyPosition] !== undefined) {
+        var tmpStep = recordedHistory[historyPosition];
+        if (tmpStep[0] == "M" || tmpStep[0] == "T") {
+          var tmpMove = tmpStep.slice(2).split(">");
+          var oldCol = colNames.indexOf(tmpMove[0][0]);
+          var oldRow = rowNames.indexOf(Number(tmpMove[0].slice(1)));
+          var tarCol = colNames.indexOf(tmpMove[1][0]);
+          var tarRow = rowNames.indexOf(Number(tmpMove[1].slice(1)));
+          selectedCell = [oldCol, oldRow];
+          MovePyramid(tarCol, tarRow);
+        } else if (tmpStep[0] == "S") {
+          var tmpMove = tmpStep.slice(2).split(">");
+          var oldCol = colNames.indexOf(tmpMove[0][0]);
+          var oldRow = rowNames.indexOf(Number(tmpMove[0].slice(1)));
+          var tarCol = colNames.indexOf(tmpMove[1][0]);
+          var tarRow = rowNames.indexOf(Number(tmpMove[1].slice(1)));
+          selectedCell = [oldCol, oldRow];
+          MovePyramid(tarCol, tarRow);
+        } else if (tmpStep[0] == "B") {
+          var tarCol = colNames.indexOf(tmpStep[2]);
+          var tarRow = rowNames.indexOf(Number(tmpStep.slice(3)));
+          selectedCell = [tarCol, tarRow];
+          BankTree(tarCol, tarRow, 2, "step");
+        } else if (tmpStep[0] == "W") {
+          var tmpMove = tmpStep.slice(2).split(">");
+          var oldCol = colNames.indexOf(tmpMove[0][0]);
+          var oldRow = rowNames.indexOf(Number(tmpMove[0].slice(1)));
+          var tarCol = colNames.indexOf(tmpMove[1][0]);
+          var tarRow = rowNames.indexOf(Number(tmpMove[1].slice(1)));
+          swap1 = [oldCol, oldRow];
+          SwapPyramids(tarCol, tarRow);
+        }
+        historyPosition++;
+        if (playing) {
+          var tmpDelay = (moveSpeed*1000)+500;
+          histPlayTimeout = setTimeout(() => {
+            HistoryStepForward();
+          }, tmpDelay);
+        }
+      } else {
+        console.log("End of History");
+        playing = false;
+        DisableStepButtons(false);
       }
-  }
-
-  function draw() {
-    background();
-    ball.draw();
-
-    var shouldMove = Math.abs(ball.x - mouseX) > 1 || Math.abs(ball.y - mouseY) > 1;
-    //var shouldMove = Math.abs(ball.x - targetX) > 1 || Math.abs(ball.y - targetY) > 1;
-
-    if(shouldMove) {
-      ball.x += ball.dx;
-      ball.y += ball.dy;
-    } else {
-      ball.dx = 0;
-      ball.dy = 0;
+      HistoryHighlight();
     }
+    
+    function HistoryStepBackward() {
+      clearTimeout(histPlayTimeout);
+      if (historyPosition > 0) {
+        UndoLast("step");
+        historyPosition--;
+        if (playing) {
+          var tmpDelay = (moveSpeed*1000)+500;
+          histPlayTimeout = setTimeout(() => {
+            HistoryStepBackward();
+          }, tmpDelay);
+        }
+      } else {
+        console.log("Beginning of History");
+        playing = false;
+        DisableStepButtons(false);
+      }
+      HistoryHighlight();
+    }
+    
+    function HistoryPlay() {
+      playing = true;
+      clearTimeout(histPlayTimeout);
+      DisableStepButtons(true);
+      HistoryStepForward();
+    }
+    
+    function HistoryRewind() {
+      playing = true;
+      clearTimeout(histPlayTimeout);
+      DisableStepButtons(true);
+      HistoryStepBackward();
+    }
+    
+    function HistoryPause() {
+      playing = false;
+      clearTimeout(histPlayTimeout);
+      DisableStepButtons(false);
+    }
+    
+    function DisableStepButtons(val) {
+      document.getElementById("buttonStepBak").disabled = val;
+      document.getElementById("buttonStepFwd").disabled = val;
+    }
+    
+    function HistoryHighlight() {
+      var elems = document.querySelectorAll(".playbackSteps.highlight");
+      [].forEach.call(elems, function(el) {
+          el.classList.remove("highlight");
+      });
+      if (historyPosition > 0) {
+        var tmpStepDiv = document.getElementById("playbackStep-"+(historyPosition-1));
+        tmpStepDiv.classList.add("highlight")
+      }
+      var topPos = tmpStepDiv.offsetTop;
+      document.getElementById("playbackMoves").scrollTop = topPos-75;
+    }
+    
+    function SetMoveSpeed(speed=1.0) {
+      // Speed is seconds it takes for pieces to transition from point A to B
+      moveSpeed = speed;
+      adjustCSSRules('.move-slow', 'transition: all '+moveSpeed+'s');
+    }
+        
+    function ScreenShot() {
+      // Doesn't work properly due to CSS stuff, but wanted to record the basic code
+      XML2 = new XMLSerializer().serializeToString(svg);
+      newsvg = btoa(unescape(encodeURIComponent(XML2)));
+      img2= new Image();
+      img2.height = 500;
+      img2.width = 500;
+      img2.src = 'data:image/svg+xml;base64,' + newsvg;
+      
+      // This might write it to a canvas to then be converted to PNG:
+      canv = document.createElement("canvas")
+      ctx = canv.getContext('2d');
+      ctx.drawImage(img2, 0, 0);
+    }
+    
+    function createStyleElementFromCSS() {
+      var sheet = document.styleSheets[0];
+      var styleRules = [];
+      for (var i = 0; i < sheet.cssRules.length; i++) {
+        styleRules.push(sheet.cssRules.item(i).cssText);
+      }
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      style.appendChild(document.createTextNode(styleRules.join(' ')))
+      return style;
+    };
 
-    window.requestAnimationFrame(draw)
-  }
-
-  draw();
-    */
-</script>
-  
-  
+    function download() {
+      var style = createStyleElementFromCSS();
+      // fetch SVG-rendered image as a blob object
+      var svg2 = document.querySelector('svg');
+      // CSS must be explicitly embedded
+      svg2.insertBefore(style, svg2.firstChild);
+      var data = (new XMLSerializer()).serializeToString(svg2);
+      var newsvg = btoa(unescape(encodeURIComponent(data)));
+      style.remove(); // remove temporarily injected CSS
+      var img = new Image();
+      img.addEventListener('load', () => {
+        // draw the image on an ad-hoc canvas
+        var bbox = svg2.getBBox();
+        console.log(bbox);
+        var canvas = document.createElement('canvas');
+        canvas.width = "250";
+        canvas.height = bbox.height;
+        console.log(canvas);
+        var context = canvas.getContext('2d');
+        context.drawImage(img, 0, 0, bbox.width, bbox.height);
+        // trigger a synthetic download operation with a temporary link
+        var a = document.createElement('a');
+        a.download = seed+".png";
+        document.body.appendChild(a);
+        a.href = canvas.toDataURL("image/png")
+          .replace("image/png", "image/octet-stream");
+        a.click();
+        a.remove();
+      });
+      img.src = 'data:image/svg+xml;base64,' + newsvg;
+    };
+    
+    //Watching for the Enter key to be pressed in the seed text box.
+    function enterKeySeed(e) {
+      //From https://stackoverflow.com/questions/905222/enter-key-press-event-in-javascript
+      if (e.keyCode == 13) {
+        NewGame(null, "seed");
+        return false;
+      }
+    }    
+    
+    // Basic setup that should be replaced with a check for saved settings.
+    SetBoardColors(4);
+    SetPyramidColors(1);
+    DrawTable();
+    document.getElementById('stashSelector').value=1;
+    document.getElementById('backgroundSelector').value=4;
+ 
+    // Put the pieces on the board in an un-shuffled state
+    setTimeout(() => {
+        InitialPiecesOnBoard();
+    }, 500);
+   
+    // Start a new game either from a specified seed or randomly
+    setTimeout(() => {
+      if (urlParams.get("seed") !== null) {
+        seed = urlParams.get("seed");
+        document.getElementById("seedbox").value=seed;
+        NewGame(seed);
+      } else {
+        seed=Math.floor(Math.random()*100000).toString();
+        NewGame(seed);
+      }
+    }, 1000);
+    
+  </script>
 </body>
 </html>
