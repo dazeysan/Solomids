@@ -3,7 +3,10 @@
 <head>
   <title>Solomids - Playable</title>
   
-  <!-- <script src="fflate0.8.2.js"></script> -->
+  <!--
+    Solomids was designed by Alex Ottenstein and released in 2016.
+    All credit and copyright for Solomids belongs to Alex Ottenstein.
+  -->
   
   <script>
     // Copyright for the random seed code:
@@ -421,11 +424,11 @@
     
     #historyBox {
       position: absolute;
-      top: 250px;
+      top: 200px;
       left: 270px;
       background: #ccc;
       width: 215px;
-      height: 200px;
+      height: 250px;
       border: 2px solid;
       border-radius: 5px;
     }
@@ -438,6 +441,10 @@
       /*border-top: solid 2px red;*/
     }
     
+    .cellHighlight {
+      stroke: pink;
+    }
+    
     .nostyle {
       
     }
@@ -447,6 +454,35 @@
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
       touch-action: manipulation;
+    }
+    
+    .btn {
+      position: relative;
+      -webkit-transition-duration: 0.4s; /* Safari */
+      transition-duration: 0.4s;
+      text-decoration: none;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .btn:after {
+      content: "";
+      background: #00ff00;
+      display: block;
+      position: absolute;
+      padding-top: 300%;
+      padding-left: 350%;
+      margin-left: -20px!important;
+      margin-top: -120%;
+      opacity: 0;
+      transition: all 0.8s
+    }
+
+    .btn:active:after {
+      padding: 0;
+      margin: 0;
+      opacity: 1;
+      transition: 0s
     }
     
   </style>
@@ -464,6 +500,17 @@
       <div id="settings_table" style="display: table;">
         <div style="display: table-row;">
           <div class="" style="width:200px; display: table-cell;">
+            Pyramid Color:
+          </div>
+          <div class="" style="width:200px; display: table-cell;">
+            Board Colors:
+          </div>
+          <div class="" style="width:200px; display: table-cell;">
+            Cell Highlight Color:
+          </div>
+        </div>
+        <div style="display: table-row;">
+          <div class="" style="width:200px; display: table-cell;">
             <select id="stashSelector" onChange="SetPyramidColors(this.value);" style="width: 200px;">
               <option value="0">Select pyramid colors:</option>
               <option value="1">Rainbow Stash</option>
@@ -472,13 +519,23 @@
               <option value="custom">Custom</option>
             </select>
           </div>
-          <div class="" style="width:200px; display: table-cell;">
-            <select id="backgroundSelector" onChange="SetBoardColors(this.value);" style="width: 200px;">
+          <div class="" style="width: auto; display: table-cell;">
+            <select id="backgroundSelector" onChange="SetBoardColors(this.value);" style="width: -moz-available;">
               <option value="0">Select board colors:</option>
               <option value="1">Black & White</option>
               <option value="2">White & Black</option>
               <option value="3">White & Light Blue</option>
               <option value="4">Peach & Grey</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="" style="width: auto; display: table-cell;">
+            <select id="cellHighlightSelector" onChange="SetHighlightColor(this.value);" style="width: auto;">
+              <option value="0">Select highlight color:</option>
+              <option value="1">Green</option>
+              <option value="2">Pink</option>
+              <option value="3">Red</option>
+              <option value="4">Yellow</option>
               <option value="custom">Custom</option>
             </select>
           </div>
@@ -504,6 +561,11 @@
             <div id="customBoardColorPickerDiv" style="display: none; text-align: center;">
               <input type="color" id="customBoardColorPicker0" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" /><!--
           --><input type="color" id="customBoardColorPicker1" onChange="javascript:{SetCustomBoardColor();}" style="height: 40px;width: 40px;" />
+            </div>
+          </div>
+          <div style="display: table-cell;">
+            <div id="customHighlightColorPickerDiv" style="display: none; text-align: center;">
+              <input type="color" id="customHighlightColorPicker" onChange="javascript:{SetCustomHighlightColor();}" style="height: 40px;width: 40px;" />
             </div>
           </div>
         </div>
@@ -549,21 +611,21 @@
         <div id="historyBox-LoadSave">
           <div>Shareable replay:</div>
           <textarea id="historyBoxText" style="width: 190px; margin: 8px; height: 100px; font-size: 1.3em;"></textarea>
-          <button type="button" onClick="javascript:{navigator.clipboard.writeText(document.getElementById('historyBoxText').value);};" >Copy</button>
+          <button type="button" class="btn" onClick="javascript:{navigator.clipboard.writeText(document.getElementById('historyBoxText').value);};" >Copy</button>
           <button type="button" onClick="javascript:{PlaybackHistory(document.getElementById('historyBoxText').value);};" >Load</button>
         </div>
         <div id="historyBox-Playback" style="display: none;">
           <div style="display: inline-block;">
             <button type="button" id="buttonStepBak" onClick="javascript:{HistoryStepBackward();};" >Step Back</button><br/>
             <button type="button" id="buttonStepFwd" onClick="javascript:{HistoryStepForward();};" >Step Fwd</button><br/>
-            <button type="button" onClick="javascript:{HistoryPlay();};" >Play</button><br/>
+            <button type="button" id="buttonPlay" onClick="javascript:{HistoryPlay();};" >Play</button><br/>
             <button type="button" onClick="javascript:{HistoryPause();};" >Pause</button><br/>
-            <button type="button" onClick="javascript:{HistoryRewind();};" >Rewind</button><br/>
-            <button type="button" onClick="javascript:{SetMoveSpeed(1.0);};" >1x</button>
-            <button type="button" onClick="javascript:{SetMoveSpeed(0.5);};" >2x</button><br/><br/>
+            <button type="button" id="buttonRewind" onClick="javascript:{HistoryRewind();};" >Rewind</button><br/>
+            <button type="button" id="button1x" onClick="javascript:{SetMoveSpeed(1.0);};" >1x</button>
+            <button type="button" id="button2x" onClick="javascript:{SetMoveSpeed(0.5);};" >2x</button><br/><br/>
             <button type="button" onClick="javascript:{ClosePlayback();};" >Close</button>
           </div>
-          <div id="playbackMoves" style="display: inline-block; vertical-align: top; overflow: scroll; height: 190px; width: 135px;">
+          <div id="playbackMoves" style="display: inline-block; vertical-align: top; overflow: scroll; height: 240px; width: 135px;">
             asd
           </div>
         </div>
@@ -572,7 +634,10 @@
 
   </div>
 
-  <div id="testtest"><a id="download" download="image.png"><button type="button" onClick="download()">Download Image of the current board</button></a> - <a href="https://looneypyramids.wiki/wiki/Solomids" target="_blank">How to play Solomids</a></div>
+  <div>
+    <a id="download" download="image.png"><button type="button" onClick="download()">Download Image of the current board</button></a> - <a href="https://looneypyramids.wiki/wiki/Solomids" target="_blank">How to play Solomids</a><br/>
+    <br/>Original game rules and design copyright 2016 by Alex Ottenstein.
+  </div>
 
   <script>
     
@@ -605,8 +670,20 @@
       ["#ffffff", "#bbddff", "White & Light Blue"],
       ["#ffdab9", "#a2a2a2", "Peach & Grey"]
     ];
+    var highlightColors = [
+      ["", "", "Select highlight color:"],
+      ["#00ff00", "Green"],
+      ["#dc8add", "Pink"],
+      ["#ff0000", "Red"],
+      ["#f8e45c", "Yellow"]
+    ];
     var customStashColor = [];
     var customBoardColor = [];
+    var cellHighlightColor = highlightColors[1][0];
+    
+    var selectedStashColor = 1;
+    var selectedBoardColor = 4;
+    var selectedHighlightColor = 1;
   
     
     //Fill the "bag" with all of the pieces
@@ -720,7 +797,6 @@
       
       customStashColor=[...pyramidColors];
       customStashColor[0]="Custom-"+customStashColor[0];
-      //saveSettings();
       SetPyramidColors("custom");
     }
 
@@ -729,11 +805,14 @@
       fillColors[1] = document.getElementById("customBoardColorPicker1").value;
       customBoardColor=[...fillColors];
       customBoardColor[2]="Custom-"+customBoardColor[2];
-      //saveSettings();
       SetBoardColors("custom");
     }
 
-    
+    function SetCustomHighlightColor() {
+      cellHighlightColor = document.getElementById("customHighlightColorPicker").value;
+      adjustCSSRules('.boardCellClass', 'fill: '+cellHighlightColor);
+      SaveSettings();
+    }
     
     function BoardClicked(event, type=0){
       if (playbackMode) {
@@ -757,10 +836,6 @@
           selectedCell = [col, row];
           clickMode = "move";
           SetCellHighlight(col, row);
-          //if (cells[col][row].length == 3) {
-          //  //A full tree is selected.
-          //  BankTree(col, row, type);
-          //}
         }
       } else if (clickMode == "move") {
         if (selectedCell[0] == col && selectedCell[1] == row) {
@@ -821,7 +896,9 @@
     }
     
     function BankTree(col, row, type, src) {
+      // "type" is leftover from when we used double-click, could probably remove it.
       if (src == "button" && playbackMode) {
+        // "Diasable" the Bank button while in playback mode.
         return;
       }
       // A full tree was clicked, are we banking it?
@@ -848,6 +925,17 @@
       ClearCellHighlights();
       selectedCell = [-1, -1];
       clickMode = "none";
+    }
+    
+    function BankAllTrees() {
+      for (col=0; col<5; col++) {
+        for (row=0; row<10; row++) {
+          if (cells[col][row].length == 3) {
+            selectedCell = [col, row];
+            BankTree(col, row, 2, "button");
+          }
+        }
+      }
     }
     
     function DrawTable() {
@@ -941,7 +1029,7 @@
       
       // Draw the Bank button
       var bRect = document.createElementNS(svgns, "rect");
-      bRect.setAttribute("x", 270);
+      bRect.setAttribute("x", 272);
       bRect.setAttribute("y", 200);
       bRect.setAttribute("width", 80);
       bRect.setAttribute("height", 35);
@@ -950,14 +1038,14 @@
       bRect.setAttribute("stroke", "#000000");
       tableau.appendChild(bRect);
       var bText = document.createElementNS(svgns, "text");
-      bText.setAttribute("x", 300);
+      bText.setAttribute("x", 305);
       bText.setAttribute("y", 210);
       bText.setAttribute("fill", "#000000");
       bText.setAttribute("font", "Arial");
       bText.setAttribute("dominant-baseline", "hanging");
       bText.innerHTML = "Bank";
       tableau.appendChild(bText);
-      AddSVG(tableau, "Bank-icon", "BankButton1", 270, 205, 30, 30, "nostyle");
+      AddSVG(tableau, "Bank-icon", "BankButton1", 272, 205, 30, 30, "nostyle");
       var cRect = document.createElementNS(svgns, "rect");
       cRect.setAttribute("x", 270);
       cRect.setAttribute("y", 200);
@@ -1002,6 +1090,39 @@
         UndoLast("button");
       }, false);
       tableau.appendChild(bRect2);
+      
+      // Draw the Bank All button
+      var bRect = document.createElementNS(svgns, "rect");
+      bRect.setAttribute("x", 272);
+      bRect.setAttribute("y", 270);
+      bRect.setAttribute("width", 115);
+      bRect.setAttribute("height", 35);
+      bRect.setAttribute("rx", 5);
+      bRect.setAttribute("fill", "#ffffff");
+      bRect.setAttribute("stroke", "#000000");
+      tableau.appendChild(bRect);
+      var bText = document.createElementNS(svgns, "text");
+      bText.setAttribute("x", 310);
+      bText.setAttribute("y", 280);
+      bText.setAttribute("fill", "#000000");
+      bText.setAttribute("font", "Arial");
+      bText.setAttribute("dominant-baseline", "hanging");
+      bText.innerHTML = "Bank All";
+      tableau.appendChild(bText);
+      AddSVG(tableau, "Bank-icon", "BankButton1", 272, 270, 30, 30, "nostyle");
+      AddSVG(tableau, "Bank-icon", "BankButton1", 280, 279, 30, 30, "nostyle");
+      var cRect = document.createElementNS(svgns, "rect");
+      cRect.setAttribute("x", 270);
+      cRect.setAttribute("y", 270);
+      cRect.setAttribute("width", 115);
+      cRect.setAttribute("height", 35);
+      cRect.setAttribute("fill-opacity", 0.0);
+      cRect.style.cursor = "pointer";
+      cRect.addEventListener('click', function(event) {
+        console.log("Bank Button Clicked");
+        BankAllTrees();
+      }, false);
+      tableau.appendChild(cRect);
       
       // Draw the Moves count
       var mText = document.createElementNS(svgns, "text");
@@ -1233,6 +1354,7 @@
       if (pallete == 0) {
         return;
       }
+      selectedStashColor = pallete;
       if (pallete == "custom") {
         document.getElementById("customStashColorPickerDiv").style.display="";
         if (customStashColor.length == 0) {
@@ -1292,12 +1414,14 @@
         adjustCSSRules('.icon-two-part.style'+r, '--color-4: '+tmpPipStroke);
         adjustCSSRules('.icon-two-part.hollow-style'+r, '--color-4: '+tmpPipStroke);
       }
+      SaveSettings();
     }
     
     function SetBoardColors(pallete) {
       if (pallete == 0) {
         return;
       }
+      selectedBoardColor = pallete;
       if (pallete == "custom") {
         document.getElementById("customBoardColorPickerDiv").style.display="";
         if (customBoardColor.length == 0) {
@@ -1318,6 +1442,25 @@
       console.log("SetBoardColors("+pallete+") - "+fillColors[2]);
       adjustCSSRules('.boardCellClass0', 'fill: '+fillColors[0]);
       adjustCSSRules('.boardCellClass1', 'fill: '+fillColors[1]);
+      SaveSettings();
+    }
+    
+    function SetHighlightColor(pallete) {
+      console.log("SetHighlightColor("+pallete+") - ");
+      if (pallete == 0) {
+        return;
+      }
+      selectedHighlightColor = pallete;
+      if (pallete == "custom") {
+        document.getElementById("customHighlightColorPickerDiv").style.display="";
+        document.getElementById("customHighlightColorPicker").value=cellHighlightColor;
+      } else {
+        // Not using custom colors, use the specified color pallete
+        document.getElementById("customHighlightColorPickerDiv").style.display="none";
+        cellHighlightColor=highlightColors[pallete][0];
+      }
+      adjustCSSRules('.boardCellClass', 'fill: '+cellHighlightColor);
+      SaveSettings();
     }
     
     function AddCellHighlight(col, row) {
@@ -1331,7 +1474,7 @@
       hRect.setAttribute("height", cellHeight*0.9);
       hRect.setAttribute("fill", "#ffffff");
       hRect.setAttribute("fill-opacity", 0.0);
-      hRect.setAttribute("stroke", "pink");
+      hRect.setAttribute("stroke", cellHighlightColor);
       hRect.setAttribute("stroke-width", cellWidth*0.1);
       board.appendChild(hRect);
       
@@ -1746,6 +1889,7 @@
       document.getElementById("seedbox").value=seed;
       console.log(seed);
       //moveHist = [];
+      playbackMode = false;
       moveHistory = [];
       clickMode = "none";
       selectedCell = [-1, -1];
@@ -1762,7 +1906,7 @@
       if (result) {
         UpdatePiecesOnBoard();
       } else {
-        alert("This seed generates too many errors. Try another.");
+        alert("Unable to generate a puzzle with this seed. Enter a different seed or click Random Game.");
       }
     }
     
@@ -1941,11 +2085,15 @@
     
     function PlaybackHistory(data) {
       playbackMode = true;
+      ClearCellHighlights();
       document.getElementById("historyBox-LoadSave").style.display = "none";
       document.getElementById("historyBox-Playback").style.display = "";
       var tmpSeed = data.slice(0, data.indexOf("_"));
       var tmpHistory = data.slice(data.indexOf("_")+1);
-      recordedHistory = tmpHistory.split(", ");
+      recordedHistory = tmpHistory.split(",");
+      for (r=0; r<recordedHistory.length; r++) {
+        recordedHistory[r] = recordedHistory[r].trim()
+      }
       var tmpMoves = "";
       for (var m=0; m<recordedHistory.length; m++) {
         tmpMoves += "<div id='playbackStep-"+m+"' class='playbackSteps'>";
@@ -1982,6 +2130,7 @@
       document.getElementById("historyBox-LoadSave").style.display = "";
       document.getElementById("historyBox-Playback").style.display = "none";
       playing = false;
+      playbackMode = false;
       clearTimeout(histPlayTimeout);
     }
         
@@ -2054,15 +2203,27 @@
     }
     
     function HistoryPlay() {
+      if (playing) {
+        HistoryPause();
+        return false;
+      }
       playing = true;
       clearTimeout(histPlayTimeout);
+      document.getElementById("buttonPlay").style.color = "green";
+      document.getElementById("buttonRewind").style.color = "";
       DisableStepButtons(true);
       HistoryStepForward();
     }
     
     function HistoryRewind() {
+      if (playing) {
+        HistoryPause();
+        return false;
+      }
       playing = true;
       clearTimeout(histPlayTimeout);
+      document.getElementById("buttonPlay").style.color = "";
+      document.getElementById("buttonRewind").style.color = "green";
       DisableStepButtons(true);
       HistoryStepBackward();
     }
@@ -2070,6 +2231,8 @@
     function HistoryPause() {
       playing = false;
       clearTimeout(histPlayTimeout);
+      document.getElementById("buttonPlay").style.color = "";
+      document.getElementById("buttonRewind").style.color = "";
       DisableStepButtons(false);
     }
     
@@ -2085,31 +2248,26 @@
       });
       if (historyPosition > 0) {
         var tmpStepDiv = document.getElementById("playbackStep-"+(historyPosition-1));
-        tmpStepDiv.classList.add("highlight")
+        tmpStepDiv.classList.add("highlight");
+        var topPos = tmpStepDiv.offsetTop;
+        document.getElementById("playbackMoves").scrollTop = topPos-75;
       }
-      var topPos = tmpStepDiv.offsetTop;
-      document.getElementById("playbackMoves").scrollTop = topPos-75;
     }
     
     function SetMoveSpeed(speed=1.0) {
       // Speed is seconds it takes for pieces to transition from point A to B
       moveSpeed = speed;
+      if (speed == 1.0) {
+        document.getElementById("button1x").style.color = "green";
+        document.getElementById("button2x").style.color = "";
+      } else if (speed == 0.5) {
+        document.getElementById("button1x").style.color = "";
+        document.getElementById("button2x").style.color = "green";
+      } else {
+        document.getElementById("button1x").style.color = "";
+        document.getElementById("button2x").style.color = "";
+      }
       adjustCSSRules('.move-slow', 'transition: all '+moveSpeed+'s');
-    }
-        
-    function ScreenShot() {
-      // Doesn't work properly due to CSS stuff, but wanted to record the basic code
-      XML2 = new XMLSerializer().serializeToString(svg);
-      newsvg = btoa(unescape(encodeURIComponent(XML2)));
-      img2= new Image();
-      img2.height = 500;
-      img2.width = 500;
-      img2.src = 'data:image/svg+xml;base64,' + newsvg;
-      
-      // This might write it to a canvas to then be converted to PNG:
-      canv = document.createElement("canvas")
-      ctx = canv.getContext('2d');
-      ctx.drawImage(img2, 0, 0);
     }
     
     function createStyleElementFromCSS() {
@@ -2165,13 +2323,53 @@
       }
     }    
     
-    // Basic setup that should be replaced with a check for saved settings.
-    SetBoardColors(4);
-    SetPyramidColors(1);
+    function SaveSettings() {
+      console.log("SaveSettings");
+      var settings = {};
+      settings.customStashColor = customStashColor;
+      settings.customBoardColor = customBoardColor;
+      settings.cellHighlightColor = cellHighlightColor;
+      settings.pyramidColors = pyramidColors;
+      settings.fillColors = fillColors;
+      settings.selectedStashColor = selectedStashColor;
+      settings.selectedBoardColor = selectedBoardColor;
+      settings.selectedHighlightColor = selectedHighlightColor;
+      localStorage.settings = JSON.stringify(settings);
+    }
+    
+    function LoadSettings() {
+      console.log("LoadSettings()");
+      var settings = JSON.parse(localStorage.settings || null) || {};
+      if (Object.keys(settings).length > 0) {
+        console.log("Settings found, loading");
+        customStashColor = settings.customStashColor;
+        customBoardColor = settings.customBoardColor;
+        cellHighlightColor = settings.cellHighlightColor;
+        pyramidColors = settings.pyramidColors;
+        fillColors = settings.fillColors;
+        selectedStashColor = settings.selectedStashColor;
+        selectedBoardColor = settings.selectedBoardColor;
+        selectedHighlightColor = settings.selectedHighlightColor;
+        SetPyramidColors(selectedStashColor);
+        document.getElementById("stashSelector").value = selectedStashColor;
+        SetBoardColors(selectedBoardColor);
+        document.getElementById("backgroundSelector").value = selectedBoardColor;
+        SetHighlightColor(selectedHighlightColor);
+        document.getElementById("cellHighlightSelector").value = selectedHighlightColor;
+      } else {
+        console.log("Settings NOT found, using defaults");
+        SetPyramidColors(1);
+        SetBoardColors(4);
+        SetHighlightColor(1);
+        document.getElementById('stashSelector').value=1;
+        document.getElementById('backgroundSelector').value=4;
+      }
+    }
+    
+    SetMoveSpeed(1.0);
+    LoadSettings();
     DrawTable();
-    document.getElementById('stashSelector').value=1;
-    document.getElementById('backgroundSelector').value=4;
- 
+    
     // Put the pieces on the board in an un-shuffled state
     setTimeout(() => {
         InitialPiecesOnBoard();
