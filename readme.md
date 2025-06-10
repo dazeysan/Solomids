@@ -4,6 +4,8 @@ A Solomids random setup generator, now also fully playable online.
 # Links
 Play it here: [https://dazeysan.github.io/Solomids/SolomidsPlayable.html]
 
+Or a more mobile/portrait friendly version here: [https://dazeysan.github.io/Solomids/SolomidsMobile.html] (Thanks to mcdemarco)
+
 Read about the game and the rules here: [https://looneypyramids.wiki/wiki/Solomids]
 
 # Copyright
